@@ -17,6 +17,13 @@ import prisma from "../src/config/database";
 /** Date dans `days` jours par rapport à aujourd'hui (pour les dates futures/passées). */
 const daysFromNow = (days: number): Date => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
+/**
+ * Date dans `days` jours, tronquée à UTC minuit (jour exact, sans heure) :
+ * le filtrage mensuel (`month=YYYY-MM`) reste fiable quel que soit le fuseau.
+ */
+const daysFromNowUtc = (days: number): Date =>
+  new Date(daysFromNow(days).toISOString().slice(0, 10) + "T00:00:00.000Z");
+
 /** Date de naissance correspondant à un âge donné (15 janvier de l'année N - âge). */
 const birthDate = (age: number): Date => new Date(new Date().getFullYear() - age, 0, 15);
 
@@ -100,56 +107,54 @@ async function main() {
   }
   console.log(`  ✔ ${joueursData.length} joueurs créés (3 par catégorie)`);
 
-  // ---- Module 2 : Événements (2 matchs + 1 entraînement, catégorie U15) ----
-  const u15 = categories["U15"].id;
-  await prisma.evenement.create({
-    data: {
-      titre: "BFA U15 vs Olympique de Douala",
-      date: daysFromNow(5),
-      heure: "15:30",
-      lieu: "Stade de la Bille",
-      type: "MATCH",
-      equipeA: "BFA U15",
-      equipeB: "Olympique de Douala",
-      scoreA: null,
-      scoreB: null,
-      typeMatch: "CHAMPIONNAT",
-      categorieId: u15,
-      administrateurId: admin.id,
-    },
-  });
+  // ---- Module 2 : Événements (≥ 8, toutes catégories, répartis sur plusieurs mois) ----
+  const evenementsData: {
+    titre: string;
+    date: Date;
+    heure: string;
+    lieu: string;
+    type: "MATCH" | "ENTRAINEMENT";
+    categorie: string;
+    equipeA?: string;
+    equipeB?: string;
+    typeMatch?: "AMICAL" | "CHAMPIONNAT";
+    objectif?: string;
+    duree?: number;
+  }[] = [
+    // U9
+    { titre: "Entraînement U9 — conduite de balle", date: daysFromNowUtc(4), heure: "16:30", lieu: "Terrain annexe", type: "ENTRAINEMENT", categorie: "U9", objectif: "Travail de la conduite de balle et du dribble", duree: 60 },
+    { titre: "BFA U9 vs Union de Mokolo", date: daysFromNowUtc(8), heure: "10:00", lieu: "Stade de la Bille", type: "MATCH", categorie: "U9", equipeA: "BFA U9", equipeB: "Union de Mokolo", typeMatch: "AMICAL" },
+    { titre: "Entraînement U9 — jeu collectif", date: daysFromNowUtc(28), heure: "16:00", lieu: "Terrain annexe", type: "ENTRAINEMENT", categorie: "U9", objectif: "Initiation au jeu collectif", duree: 45 },
+    // U15
+    { titre: "Entraînement tactique U15", date: daysFromNowUtc(3), heure: "17:00", lieu: "Terrain annexe", type: "ENTRAINEMENT", categorie: "U15", objectif: "Travail du pressing et de la relance courte", duree: 90 },
+    { titre: "BFA U15 vs Olympique de Douala", date: daysFromNowUtc(5), heure: "15:30", lieu: "Stade de la Bille", type: "MATCH", categorie: "U15", equipeA: "BFA U15", equipeB: "Olympique de Douala", typeMatch: "CHAMPIONNAT" },
+    { titre: "BFA U15 vs Canon Yaoundé", date: daysFromNowUtc(12), heure: "16:00", lieu: "Stade de la Bille", type: "MATCH", categorie: "U15", equipeA: "BFA U15", equipeB: "Canon Yaoundé", typeMatch: "AMICAL" },
+    { titre: "BFA U15 vs Coton Sport", date: daysFromNowUtc(35), heure: "15:30", lieu: "Stade de la Bille", type: "MATCH", categorie: "U15", equipeA: "BFA U15", equipeB: "Coton Sport", typeMatch: "CHAMPIONNAT" },
+    // U17
+    { titre: "Préparation physique U17", date: daysFromNowUtc(10), heure: "18:00", lieu: "Gymnase BFA", type: "ENTRAINEMENT", categorie: "U17", objectif: "Circuit de renforcement musculaire", duree: 75 },
+    { titre: "BFA U17 vs Les Astres de Douala", date: daysFromNowUtc(20), heure: "15:00", lieu: "Stade de la Bille", type: "MATCH", categorie: "U17", equipeA: "BFA U17", equipeB: "Les Astres de Douala", typeMatch: "CHAMPIONNAT" },
+    { titre: "BFA U17 vs Fortuna Mfou", date: daysFromNowUtc(50), heure: "16:30", lieu: "Stade municipal", type: "MATCH", categorie: "U17", equipeA: "BFA U17", equipeB: "Fortuna Mfou", typeMatch: "AMICAL" },
+  ];
 
-  await prisma.evenement.create({
-    data: {
-      titre: "BFA U15 vs Canon Yaoundé",
-      date: daysFromNow(12),
-      heure: "16:00",
-      lieu: "Stade de la Bille",
-      type: "MATCH",
-      equipeA: "BFA U15",
-      equipeB: "Canon Yaoundé",
-      scoreA: null,
-      scoreB: null,
-      typeMatch: "AMICAL",
-      categorieId: u15,
-      administrateurId: admin.id,
-    },
-  });
-
-  await prisma.evenement.create({
-    data: {
-      titre: "Entraînement tactique",
-      date: daysFromNow(3),
-      heure: "17:00",
-      lieu: "Terrain annexe",
-      type: "ENTRAINEMENT",
-      objectif: "Travail du pressing et de la relance courte",
-      duree: 90,
-      categorieId: u15,
-      administrateurId: admin.id,
-    },
-  });
-  console.log("  ✔ 3 événements créés (2 matchs + 1 entraînement)");
+  for (const ev of evenementsData) {
+    await prisma.evenement.create({
+      data: {
+        titre: ev.titre,
+        date: ev.date,
+        heure: ev.heure,
+        lieu: ev.lieu,
+        type: ev.type,
+        equipeA: ev.equipeA ?? null,
+        equipeB: ev.equipeB ?? null,
+        typeMatch: ev.typeMatch ?? null,
+        objectif: ev.objectif ?? null,
+        duree: ev.duree ?? null,
+        categorieId: categories[ev.categorie].id,
+        administrateurId: admin.id,
+      },
+    });
+  }
+  console.log(`  ✔ ${evenementsData.length} événements créés (matches + entraînements, toutes catégories)`);
 
   // ---- Module 3 : Demande d'essai ----
   await prisma.demandeEssai.create({
@@ -262,6 +267,7 @@ async function main() {
   console.log("  ✔ 2 articles créés");
 
   // ---- Module 7 : Résultats + Classements (catégorie U15) ----
+  const u15 = categories["U15"].id;
   await prisma.resultat.create({
     data: {
       equipeA: "BFA U15",

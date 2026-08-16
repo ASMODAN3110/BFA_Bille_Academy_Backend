@@ -5,7 +5,7 @@
 // `JWT_SECRET` est obligatoire (contrôlé au démarrage dans `src/index.ts`) ;
 // `JWT_EXPIRES_IN` est optionnel (défaut : "7d", formats jsonwebtoken : "7d", "1h", ...).
 
-import jwt from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
 
 /** Contenu du token JWT, aussi injecté dans `req.user` par le middleware `authenticate`. */
 export interface AuthTokenPayload {
@@ -16,9 +16,12 @@ export interface AuthTokenPayload {
 
 /** Génère un token signé pour l'administrateur. */
 export function signToken(payload: AuthTokenPayload): string {
-  return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
-  });
+  // `expiresIn` est typé `StringValue | number` (template literal) : la valeur
+  // provenant de l'env est un `string` dynamique → cast vers le type attendu.
+  const options: SignOptions = {
+    expiresIn: (process.env.JWT_EXPIRES_IN ?? "7d") as SignOptions["expiresIn"],
+  };
+  return jwt.sign(payload, process.env.JWT_SECRET!, options);
 }
 
 /**

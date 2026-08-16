@@ -9,6 +9,11 @@ import cors from "cors";
 import morgan from "morgan";
 import authRoutes from "./routes/authRoutes";
 import adminRoutes from "./routes/adminRoutes";
+import categoryRoutes from "./routes/categoryRoutes";
+import playerRoutes from "./routes/playerRoutes";
+import playerAdminRoutes from "./routes/playerAdminRoutes";
+import eventRoutes from "./routes/eventRoutes";
+import eventAdminRoutes from "./routes/eventAdminRoutes";
 import { authenticate } from "./middlewares/auth";
 
 const app = express();
@@ -21,8 +26,15 @@ app.use(express.json()); // parsing du body JSON
 
 // ---- Routes publiques ----
 app.use("/api/auth", authRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/players", playerRoutes);
+app.use("/api/events", eventRoutes);
 
 // ---- Routes protégées (back-office) ----
+// `/admin/players` et `/admin/events` sont montés avant `/admin` : plus spécifiques, ils sont
+// traités directement (sans transiter par le routeur admin ni relancer `authenticate`).
+app.use("/admin/players", authenticate, playerAdminRoutes);
+app.use("/admin/events", authenticate, eventAdminRoutes);
 app.use("/admin", authenticate, adminRoutes);
 
 // ---- 404 (après toutes les routes) ----

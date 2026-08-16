@@ -1,0 +1,24 @@
+// Configuration TypeScript — BFA Bille Football Academy
+// Le projet tourne via `tsx` (pas d'étape de build) : `noEmit` désactive l'émission,
+// ce fichier sert à la vérification de types (VSCode, `npx tsc --noEmit`).
+// `moduleResolution: "bundler"` reflète la résolution de tsx/esbuild (imports sans extension).
+
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "strict": true
+  },
+  "include": ["src/**/*.ts", "prisma/seed.ts"],
+  "exclude": ["node_modules", "generated/prisma", "dist"]
+}
