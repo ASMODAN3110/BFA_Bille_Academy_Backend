@@ -1,0 +1,304 @@
+// Schéma Prisma — BFA Bille Football Academy
+// Généré à partir du diagramme de classes UML (module 1 à 9).
+// Contexte : Prisma 7 (générateur `prisma-client`, sortie TypeScript).
+// L'URL de connexion est fournie via `datasource.url` dans `prisma.config.ts` (v7).
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  // Requis pour que `tsx` (seed) résolve les imports .js générés vers leurs fichiers .ts
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =====================================================================
+// ÉNUMÉRATIONS
+// =====================================================================
+
+/// Type d'un match (Module 2 & 7)
+enum TypeMatch {
+  AMICAL
+  CHAMPIONNAT
+}
+
+/// Discriminant de l'entité Evenement (Module 2) : match ou entraînement
+enum TypeEvenement {
+  MATCH
+  ENTRAINEMENT
+}
+
+/// Statut d'une demande d'essai (Module 3)
+enum StatutDemande {
+  EN_ATTENTE
+  CONFIRME
+  REFUSE
+}
+
+/// Catégorie d'un article de blog (Module 6)
+enum CategorieArticle {
+  MATCHS
+  EVENEMENTS
+  PORTRAITS
+  COMMUNIQUES
+}
+
+/// Tailles disponibles à la boutique (Module 8)
+enum Taille {
+  S
+  M
+  L
+  XL
+}
+
+// =====================================================================
+// MODÈLES
+// =====================================================================
+
+/// Module 1 — Catégorie d'âge de l'académie.
+/// Contrainte métier : la tranche [ageMin, ageMax] doit rester dans 9–17 ans (validation service).
+model Categorie {
+  id             Int             @id @default(autoincrement())
+  nom            String          @unique
+  ageMin         Int
+  ageMax         Int
+
+  joueurs        Joueur[]
+  evenements     Evenement[]
+  ficheTechnique FicheTechnique?
+  resultats      Resultat[]
+  classements    Classement[]
+
+  @@index([nom])
+}
+
+/// Module 1 — Joueur de l'académie.
+/// Contrainte métier : âge calculé depuis dateNaissance entre 9 et 17 ans (méthode `getAge()`, validation service).
+model Joueur {
+  id               Int             @id @default(autoincrement())
+  nom              String
+  prenom           String
+  dateNaissance    DateTime
+  poste            String
+  photo            String?
+  dateArrivee      DateTime        @default(now())
+
+  categorieId      Int
+  categorie        Categorie       @relation(fields: [categorieId], references: [id], onDelete: Cascade)
+  administrateurId Int?
+  creePar          Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
+
+  @@index([categorieId])
+  @@index([nom])
+}
+
+/// Module 2 — Événement du calendrier.
+/// Table unique : le champ `type` distingue Match / Entraînement (équivalent concret de l'héritage UML).
+/// Les colonnes sont nullables selon le type (match : equipeA/B, scoreA/B, typeMatch ; entraînement : objectif, duree).
+/// `heure` est stockée en String (format "HH:MM") car Prisma n'a pas de type Time natif.
+/// Méthodes UML (`getDetails()`, `estDansLeFutur()`, `getScore()`, `estTermine()`, `getDureeFormatee()`) : couche service.
+model Evenement {
+  id               Int             @id @default(autoincrement())
+  titre            String
+  date             DateTime
+  heure            String
+  lieu             String
+  type             TypeEvenement
+
+  // Champs spécifiques MATCH (nullables)
+  equipeA          String?
+  equipeB          String?
+  scoreA           Int?
+  scoreB           Int?
+  typeMatch        TypeMatch?
+  // Champs spécifiques ENTRAINEMENT (nullables)
+  objectif         String?
+  duree            Int?
+
+  categorieId      Int
+  categorie        Categorie       @relation(fields: [categorieId], references: [id], onDelete: Cascade)
+  administrateurId Int?
+  creePar          Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([categorieId])
+  @@index([type])
+}
+
+/// Module 3 — Demande de rendez-vous pour un essai.
+/// Contraintes métier : `dateEssai` doit être dans le futur ; `age` entre 9 et 17 ans (méthodes `validerDate()`, `validerEmail()`, couche service).
+model DemandeEssai {
+  id               Int             @id @default(autoincrement())
+  nomJoueur        String
+  prenomJoueur     String
+  age              Int
+  telephone        String
+  email            String
+  dateEssai        DateTime
+  message          String?
+  statut           StatutDemande   @default(EN_ATTENTE)
+  motifRefus       String?
+  dateSoumission   DateTime        @default(now())
+
+  administrateurId Int?
+  traitePar        Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
+
+  @@index([statut])
+  @@index([email])
+  @@index([administrateurId])
+}
+
+/// Module 4 — Album de la galerie photos / vidéos.
+/// `medias` est un tableau Json de chemins vers les médias (méthodes `getMedias()`, `getNombreMedias()`, `ajouterMedia()` : couche service).
+model Album {
+  id               Int             @id @default(autoincrement())
+  titre            String
+  description      String?
+  dateCreation     DateTime        @default(now())
+  theme            String
+  medias           Json
+
+  administrateurId Int?
+  creePar          Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
+
+  @@index([dateCreation])
+}
+
+/// Module 5 — Fiche technique d'une catégorie (relation 1:1 avec Categorie).
+/// `staff`, `palmares` et `objectifs` sont des textes multilignes (listes séparées par retours à la ligne),
+/// exploités par `getStaffList()` / `getPalmaresList()` en couche service.
+model FicheTechnique {
+  id            Int             @id @default(autoincrement())
+  staff         String          @db.Text
+  palmares      String          @db.Text
+  objectifs     String          @db.Text
+  saison        String
+
+  categorieId   Int             @unique
+  categorie     Categorie       @relation(fields: [categorieId], references: [id], onDelete: Cascade)
+  modifieParId  Int?
+  modifiePar    Administrateur? @relation(fields: [modifieParId], references: [id], onDelete: SetNull)
+}
+
+/// Module 6 — Article du blog d'actualités.
+/// Contraintes métier : `titre` et `contenu` non vides (méthodes `publier()`, `modifier()`, `getExtrait()` : couche service).
+model Article {
+  id               Int             @id @default(autoincrement())
+  titre            String
+  contenu          String          @db.Text
+  image            String?
+  categorie        CategorieArticle
+  datePublication  DateTime        @default(now())
+  auteur           String
+  estPublie        Boolean         @default(false)
+
+  administrateurId Int?
+  ecritPar         Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
+
+  @@index([datePublication])
+  @@index([categorie])
+  @@index([estPublie])
+}
+
+/// Module 7 — Résultat d'un match.
+/// Pas de clé étrangère vers Classement (décision d'architecture) : un résultat met à jour le classement
+/// de deux équipes, le recalcul est fait en couche service via `recalculer()`.
+model Resultat {
+  id               Int             @id @default(autoincrement())
+  equipeA          String
+  equipeB          String
+  scoreA           Int
+  scoreB           Int
+  date             DateTime
+  type             TypeMatch       @default(AMICAL)
+
+  categorieId      Int?
+  categorie        Categorie?      @relation(fields: [categorieId], references: [id], onDelete: Cascade)
+  administrateurId Int?
+  saisiPar         Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([categorieId])
+}
+
+/// Module 7 — Ligne de classement d'une équipe pour une catégorie.
+/// Une équipe ne peut apparaître qu'une fois par catégorie (@@unique). Méthode `recalculer()` : couche service.
+model Classement {
+  id          Int       @id @default(autoincrement())
+  equipe      String
+  matchsJoues Int       @default(0)
+  victoires   Int       @default(0)
+  nuls        Int       @default(0)
+  defaites    Int       @default(0)
+  points      Int       @default(0)
+
+  categorieId Int
+  categorie   Categorie @relation(fields: [categorieId], references: [id], onDelete: Cascade)
+
+  @@unique([categorieId, equipe])
+  @@index([categorieId])
+}
+
+/// Module 8 — Produit dérivé de la boutique.
+model Produit {
+  id               Int             @id @default(autoincrement())
+  nom              String
+  description      String          @db.Text
+  prix             Float
+  image            String?
+  tailles          Taille[]
+
+  administrateurId Int?
+  gereePar         Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
+  devis            Devis[]
+
+  @@index([nom])
+}
+
+/// Module 8 — Demande de devis pour un produit.
+/// Contrainte métier : `telephone` obligatoire (méthodes `validerTelephone()`, `envoyerConfirmation()` : couche service).
+model Devis {
+  id               Int             @id @default(autoincrement())
+  nomComplet       String
+  email            String
+  telephone        String
+  quantite         Int             @default(1)
+  taille           Taille?
+  message          String?
+  dateDemande      DateTime        @default(now())
+  estTraite        Boolean         @default(false)
+
+  produitId        Int
+  produit          Produit         @relation(fields: [produitId], references: [id], onDelete: Cascade)
+  administrateurId Int?
+  traitePar        Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
+
+  @@index([produitId])
+  @@index([estTraite])
+}
+
+/// Module 9 — Administrateur du back-office.
+/// `motDePasse` contient le hash bcrypt (jamais en clair). Méthodes `authentifier()`, `changerMotDePasse()`, `gererContenu()` : couche service.
+model Administrateur {
+  id               Int             @id @default(autoincrement())
+  nom              String
+  email            String          @unique
+  motDePasse       String
+  role             String          @default("ADMIN")
+  derniereConnexion DateTime?
+  dateCreation     DateTime        @default(now())
+
+  joueurs          Joueur[]
+  evenements       Evenement[]
+  demandesEssai    DemandeEssai[]
+  albums           Album[]
+  fichesTechniques FicheTechnique[]
+  articles         Article[]
+  resultats        Resultat[]
+  produits         Produit[]
+  devis            Devis[]
+
+  @@index([email])
+}

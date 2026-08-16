@@ -1,0 +1,74 @@
+# ------------------------------------------------------------------
+# Dépendances
+# ------------------------------------------------------------------
+node_modules/
+
+# ------------------------------------------------------------------
+# Variables d'environnement (jamais versionnées — contiennent des secrets)
+# ------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ------------------------------------------------------------------
+# Client Prisma généré (régénéré par `npm run db:generate`)
+# ------------------------------------------------------------------
+/generated/prisma
+
+# ------------------------------------------------------------------
+# Fichiers de build / transpilation
+# ------------------------------------------------------------------
+dist/
+build/
+*.tsbuildinfo
+
+# ------------------------------------------------------------------
+# Logs
+# ------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------------------------------------------
+# Couverture de tests
+# ------------------------------------------------------------------
+coverage/
+.nyc_output/
+
+# ------------------------------------------------------------------
+# Cache d'outils
+# ------------------------------------------------------------------
+.cache/
+.tmp/
+.temp/
+
+# ------------------------------------------------------------------
+# Fichiers OS
+# ------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# ------------------------------------------------------------------
+# Agents IA : Claude Code, Windsurf, skills de plugins
+# ------------------------------------------------------------------
+# `.claude/` est versionné : il contient les instructions partagées du projet
+# (CLAUDE.md, settings.json d'équipe, commandes, agents, skills maison).
+# Seule la config locale machine est ignorée :
+.claude/settings.local.json
+# `.windsurf/` : config locale de Windsurf (settings, sessions) + junctions
+# de skills plugins non portables.
+.windsurf/
+# Skills installés par des plugins tiers (régénérables, junctions à chemins
+# absolus non portables) — à réinstaller par machine :
+.agents/
+
+# ------------------------------------------------------------------
+# IDE / éditeurs
+# (les réglages partagés de VS Code — .vscode/ — sont volontairement commités)
+# ------------------------------------------------------------------
+.idea/
+*.swp
+*.swo
