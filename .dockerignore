@@ -1,0 +1,24 @@
+# --- Dépendances et générés (recréés dans l'image) ---
+node_modules
+generated/prisma
+
+# --- Secrets / environnement ---
+.env
+.env.*
+
+# --- Git ---
+.git
+
+# --- Logs / cache / build ---
+*.log
+logs
+.cache
+dist
+build
+coverage
+
+# --- Dossiers d'agents IA / IDE (inutiles dans l'image) ---
+.claude
+.agents
+.windsurf
+.idea

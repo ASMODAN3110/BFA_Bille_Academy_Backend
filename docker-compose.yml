@@ -1,0 +1,23 @@
+# docker-compose.yml — BFA Bille Football Academy (backend uniquement)
+# La base PostgreSQL reste LOCALE (non dockerisée) : l'app s'y connecte via
+# `host.docker.internal` (Docker Desktop), qui pointe vers le localhost de l'hôte.
+#
+# Usage :
+#   docker compose up --build    → API sur http://localhost:4000
+#   docker compose down          → arrêt du conteneur app
+#
+# Prérequis : PostgreSQL local démarré sur localhost:5432, avec la base
+# `bfa_bille_academy` migrée et seedée (cf. DATABASE_URL dans .env).
+
+services:
+  app:
+    build: .
+    environment:
+      # Depuis le conteneur, `localhost` désigne le conteneur lui-même :
+      # on utilise `host.docker.internal` pour joindre le PostgreSQL hôte.
+      DATABASE_URL: postgresql://postgres:0901@host.docker.internal:5432/bfa_bille_academy?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change_me_docker}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      PORT: 4000
+    ports:
+      - "4000:4000"
