@@ -47,14 +47,21 @@ async function main() {
   await prisma.evenement.deleteMany();
   await prisma.joueur.deleteMany();
   await prisma.categorie.deleteMany();
-  await prisma.administrateur.deleteMany();
+  // L'administrateur n'est PAS supprimé : le DELETE ne réinitialise pas la
+  // séquence auto-increment PostgreSQL → l'admin changerait d'id à chaque
+  // reseed, invalidant tous les tokens JWT déjà émis (id périmé → erreur FK).
+  // L'upsert ci-dessous préserve l'id et rafraîchit le mot de passe démo.
 
   console.log("→ Création des données de démonstration…");
 
   // ---- Module 9 : Administrateur (mot de passe hashé) ----
   const admin = await prisma.administrateur.upsert({
     where: { email: "admin@bfa-academy.com" },
-    update: {},
+    update: {
+      nom: "Administrateur BFA",
+      motDePasse: bcrypt.hashSync("BFA@2026!", 10),
+      role: "SUPER_ADMIN",
+    },
     create: {
       nom: "Administrateur BFA",
       email: "admin@bfa-academy.com",
@@ -341,6 +348,7 @@ async function main() {
       categorie: "MATCHS",
       auteur: "Communication BFA",
       estPublie: true,
+      datePublication: new Date("2026-08-05"),
       administrateurId: admin.id,
     },
   });
@@ -354,10 +362,67 @@ async function main() {
       categorie: "PORTRAITS",
       auteur: "Communication BFA",
       estPublie: false,
+      datePublication: new Date("2026-08-08"),
       administrateurId: admin.id,
     },
   });
-  console.log("  ✔ 2 articles créés");
+
+  await prisma.article.create({
+    data: {
+      titre: "La BFA lance sa saison 2026-2027",
+      contenu:
+        "La BFA Bille Football Academy ouvre officiellement sa saison 2026-2027. Programme des " +
+        "entraînements, dates des tournois et objectifs sportifs pour chacune des catégories.",
+      categorie: "EVENEMENTS",
+      auteur: "Communication BFA",
+      estPublie: true,
+      datePublication: new Date("2026-08-10"),
+      administrateurId: admin.id,
+    },
+  });
+
+  await prisma.article.create({
+    data: {
+      titre: "Communiqué : dates des essais U9 à U17",
+      contenu:
+        "Les essais de la saison 2026-2027 se tiendront au stade BFA. Les familles sont invitées " +
+        "à inscrire leurs enfants via le formulaire de demande d'essai du site.",
+      categorie: "COMMUNIQUES",
+      auteur: "Communication BFA",
+      estPublie: true,
+      datePublication: new Date("2026-08-12"),
+      administrateurId: admin.id,
+    },
+  });
+
+  await prisma.article.create({
+    data: {
+      titre: "Bilan du tournoi régional U17",
+      contenu:
+        "Les U17 terminent à la deuxième place du tournoi régional après une finale disputée. " +
+        "Un bilan encourageant et de belles promesses pour la suite de la saison.",
+      categorie: "MATCHS",
+      auteur: "Communication BFA",
+      estPublie: false,
+      datePublication: new Date("2026-08-13"),
+      administrateurId: admin.id,
+    },
+  });
+
+  await prisma.article.create({
+    data: {
+      titre: "Rencontre avec le staff technique",
+      contenu:
+        "Entretien avec les entraîneurs de la BFA : méthodes de travail, suivi des jeunes " +
+        "et ambitions du centre de formation.",
+      categorie: "PORTRAITS",
+      auteur: "Communication BFA",
+      estPublie: true,
+      datePublication: new Date("2026-08-15"),
+      administrateurId: admin.id,
+    },
+  });
+  console.log("  ✔ 6 articles créés");
 
   // ---- Module 7 : Résultats + Classements (catégorie U15) ----
   const u15 = categories["U15"].id;
