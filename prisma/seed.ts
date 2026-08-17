@@ -10,6 +10,7 @@ import bcrypt from "bcryptjs";
 // Client + connexion (driver adapter `@prisma/adapter-pg`) centralisés dans src/config/database.ts
 import prisma from "../src/config/database";
 import type { Prisma } from "../generated/prisma/client";
+import { recalculerClassement } from "../src/services/rankingService";
 
 // ---------------------------------------------------------------------
 // Helpers de dates
@@ -424,45 +425,40 @@ async function main() {
   });
   console.log("  ✔ 6 articles créés");
 
-  // ---- Module 7 : Résultats + Classements (catégorie U15) ----
-  const u15 = categories["U15"].id;
-  await prisma.resultat.create({
-    data: {
-      equipeA: "BFA U15",
-      equipeB: "Olympique de Douala",
-      scoreA: 3,
-      scoreB: 1,
-      date: daysFromNow(-2),
-      type: "CHAMPIONNAT",
-      categorieId: u15,
-      administrateurId: admin.id,
-    },
-  });
-
-  await prisma.resultat.create({
-    data: {
-      equipeA: "BFA U15",
-      equipeB: "Canon Yaoundé",
-      scoreA: 2,
-      scoreB: 2,
-      date: daysFromNow(-6),
-      type: "AMICAL",
-      categorieId: u15,
-      administrateurId: admin.id,
-    },
-  });
-
-  // Classements initiaux (recalculables via la couche service `recalculer()`).
-  const classementsData = [
-    { equipe: "BFA U15", matchsJoues: 2, victoires: 1, nuls: 1, defaites: 0, points: 4 },
-    { equipe: "Olympique de Douala", matchsJoues: 2, victoires: 0, nuls: 0, defaites: 2, points: 0 },
-    { equipe: "Canon Yaoundé", matchsJoues: 1, victoires: 0, nuls: 1, defaites: 0, points: 1 },
+  // ---- Module 7 : Résultats + Classements (recalculés via la couche service) ----
+  // 8 résultats répartis sur les catégories U9 / U15 / U17 ; le classement n'est
+  // PAS saisi à la main : il est recalculé par `recalculerClassement` (règle
+  // 3 pts victoire, 1 nul, 0 défaite) — cf. src/services/rankingService.ts.
+  const resultatsData: {
+    equipeA: string;
+    equipeB: string;
+    scoreA: number;
+    scoreB: number;
+    date: Date;
+    type: "AMICAL" | "CHAMPIONNAT";
+    categorieId: number;
+  }[] = [
+    { equipeA: "BFA U9", equipeB: "Union de Mokolo", scoreA: 4, scoreB: 2, date: daysFromNow(-3), type: "AMICAL", categorieId: categories["U9"].id },
+    { equipeA: "BFA U9", equipeB: "Fortuna Mfou", scoreA: 1, scoreB: 1, date: daysFromNow(-9), type: "AMICAL", categorieId: categories["U9"].id },
+    { equipeA: "BFA U15", equipeB: "Olympique de Douala", scoreA: 3, scoreB: 1, date: daysFromNow(-2), type: "CHAMPIONNAT", categorieId: categories["U15"].id },
+    { equipeA: "BFA U15", equipeB: "Canon Yaoundé", scoreA: 2, scoreB: 2, date: daysFromNow(-6), type: "AMICAL", categorieId: categories["U15"].id },
+    { equipeA: "BFA U15", equipeB: "Coton Sport", scoreA: 0, scoreB: 2, date: daysFromNow(-11), type: "CHAMPIONNAT", categorieId: categories["U15"].id },
+    { equipeA: "BFA U17", equipeB: "Les Astres de Douala", scoreA: 2, scoreB: 0, date: daysFromNow(-4), type: "CHAMPIONNAT", categorieId: categories["U17"].id },
+    { equipeA: "BFA U17", equipeB: "Fortuna Mfou", scoreA: 3, scoreB: 3, date: daysFromNow(-8), type: "AMICAL", categorieId: categories["U17"].id },
+    { equipeA: "BFA U17", equipeB: "Union de Mokolo", scoreA: 1, scoreB: 0, date: daysFromNow(-13), type: "AMICAL", categorieId: categories["U17"].id },
   ];
 
-  for (const cl of classementsData) {
-    await prisma.classement.create({ data: { ...cl, categorieId: u15 } });
+  for (const r of resultatsData) {
+    await prisma.resultat.create({
+      data: { ...r, administrateurId: admin.id },
+    });
   }
-  console.log("  ✔ 2 résultats et 3 classements créés (U15)");
+  console.log(`  ✔ ${resultatsData.length} résultats créés (U9, U15, U17)`);
+
+  for (const nom of ["U9", "U15", "U17"]) {
+    await recalculerClassement(categories[nom].id);
+  }
+  console.log("  ✔ classements recalculés (U9, U15, U17)");
 
   // ---- Module 8 : Produits + Devis ----
   const maillot = await prisma.produit.create({
