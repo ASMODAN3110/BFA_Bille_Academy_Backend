@@ -30,6 +30,14 @@ services:
       S3_BUCKET: ${S3_BUCKET:-bfa-media}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin123}
+      # Emails Module 3 — optionnels : EMAIL_ENABLED=1 + SMTP pour un envoi réel.
+      # Sans SMTP (ou EMAIL_ENABLED absent), les emails sont loggés en console (mode dev).
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-0}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-BFA Bille Football Academy <no-reply@bfa-academy.com>}
     ports:
       - "4000:4000"
 

@@ -9,6 +9,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 // Client + connexion (driver adapter `@prisma/adapter-pg`) centralisés dans src/config/database.ts
 import prisma from "../src/config/database";
+import type { Prisma } from "../generated/prisma/client";
 
 // ---------------------------------------------------------------------
 // Helpers de dates
@@ -156,9 +157,9 @@ async function main() {
   }
   console.log(`  ✔ ${evenementsData.length} événements créés (matches + entraînements, toutes catégories)`);
 
-  // ---- Module 3 : Demande d'essai ----
-  await prisma.demandeEssai.create({
-    data: {
+  // ---- Module 3 : Demandes d'essai (statuts variés pour tester le back-office) ----
+  const demandesEssai: Prisma.DemandeEssaiUncheckedCreateInput[] = [
+    {
       nomJoueur: "Abdoul",
       prenomJoueur: "Mohamed",
       age: 14,
@@ -167,36 +168,128 @@ async function main() {
       dateEssai: daysFromNow(10),
       message: "Milieu de terrain, actuellement en U14 dans son club de quartier.",
       statut: "EN_ATTENTE",
-      administrateurId: admin.id,
+      administrateurId: null,
+      motifRefus: null,
     },
-  });
-  console.log("  ✔ 1 demande d'essai créée");
+    {
+      nomJoueur: "Keïta",
+      prenomJoueur: "Ibrahim",
+      age: 16,
+      telephone: "+237 690 111 111",
+      email: "ibrahim.keita@example.com",
+      dateEssai: daysFromNow(12),
+      message: "Gardien de but, capitaine de son équipe U15.",
+      statut: "EN_ATTENTE",
+      administrateurId: null,
+      motifRefus: null,
+    },
+    {
+      nomJoueur: "Njoya",
+      prenomJoueur: "Brice",
+      age: 9,
+      telephone: "+237 690 222 222",
+      email: "brice.njoya@example.com",
+      dateEssai: daysFromNow(7),
+      message: null,
+      statut: "CONFIRME",
+      administrateurId: admin.id,
+      motifRefus: null,
+    },
+    {
+      nomJoueur: "Etoundi",
+      prenomJoueur: "Steve",
+      age: 13,
+      telephone: "+237 690 333 333",
+      email: "steve.etoundi@example.com",
+      dateEssai: daysFromNow(5),
+      message: "Ailier rapide, souhaite intégrer l'académie pour la saison prochaine.",
+      statut: "REFUSE",
+      administrateurId: admin.id,
+      motifRefus: "Effectif complet de la catégorie pour cette saison.",
+    },
+    {
+      nomJoueur: "Owona",
+      prenomJoueur: "Yann",
+      age: 17,
+      telephone: "+237 690 444 444",
+      email: "yann.owona@example.com",
+      dateEssai: daysFromNow(3),
+      message: "Attaquant, déjà en essai avec un club de D1 camerounaise.",
+      statut: "CONFIRME",
+      administrateurId: admin.id,
+      motifRefus: null,
+    },
+    {
+      nomJoueur: "Tchoua",
+      prenomJoueur: "Kévin",
+      age: 15,
+      telephone: "+237 690 555 555",
+      email: "kevin.tchoua@example.com",
+      dateEssai: daysFromNow(20),
+      message: null,
+      statut: "EN_ATTENTE",
+      administrateurId: null,
+      motifRefus: null,
+    },
+  ];
+  for (const demande of demandesEssai) {
+    await prisma.demandeEssai.create({ data: demande });
+  }
+  console.log(`  ✔ ${demandesEssai.length} demandes d'essai créées (statuts variés)`);
 
-  // ---- Module 4 : Albums ----
-  await prisma.album.create({
-    data: {
-      titre: "Saison 2025-2026",
-      description: "Photos de la rentrée de la saison",
-      theme: "MATCH",
+  // ---- Module 4 : Albums (thèmes de la liste fixe @EF21) ----
+  const albumsData: Prisma.AlbumUncheckedCreateInput[] = [
+    {
+      titre: "Entraînements de pré-saison",
+      description: "Séances techniques et physiques",
+      theme: "Entraînements",
+      administrateurId: admin.id,
       medias: [
-        "/images/albums/saison-2025-2026/photo1.jpg",
-        "/images/albums/saison-2025-2026/photo2.jpg",
-        "/images/albums/saison-2025-2026/photo3.jpg",
+        { id: "tr1", key: "galerie/pre-saison/conduite.jpg", url: "http://localhost:9000/bfa-media/galerie/pre-saison/conduite.jpg", type: "image", nom: "conduite.jpg" },
+        { id: "tr2", key: "galerie/pre-saison/physique.jpg", url: "http://localhost:9000/bfa-media/galerie/pre-saison/physique.jpg", type: "image", nom: "physique.jpg" },
+        { id: "tr3", key: "galerie/pre-saison/frappe.mp4", url: "http://localhost:9000/bfa-media/galerie/pre-saison/frappe.mp4", type: "video", nom: "frappe.mp4" },
       ],
-      administrateurId: admin.id,
     },
-  });
-
-  await prisma.album.create({
-    data: {
-      titre: "Stage de mi-saison",
-      description: "Photos et vidéos du stage de préparation",
-      theme: "STAGE",
-      medias: ["/images/albums/stage/photo1.jpg", "/images/albums/stage/video1.mp4"],
+    {
+      titre: "Matchs de la saison 2025-2026",
+      description: "Les belles actions des matchs officiels",
+      theme: "Matchs",
       administrateurId: admin.id,
+      medias: [
+        { id: "mt1", key: "galerie/matchs/ouverture.jpg", url: "http://localhost:9000/bfa-media/galerie/matchs/ouverture.jpg", type: "image", nom: "ouverture.jpg" },
+        { id: "mt2", key: "galerie/matchs/but.jpg", url: "http://localhost:9000/bfa-media/galerie/matchs/but.jpg", type: "image", nom: "but.jpg" },
+        { id: "mt3", key: "galerie/matchs/celebrations.jpg", url: "http://localhost:9000/bfa-media/galerie/matchs/celebrations.jpg", type: "image", nom: "celebrations.jpg" },
+        { id: "mt4", key: "galerie/matchs/resume.mp4", url: "http://localhost:9000/bfa-media/galerie/matchs/resume.mp4", type: "video", nom: "resume.mp4" },
+      ],
     },
-  });
-  console.log("  ✔ 2 albums créés");
+    {
+      titre: "Cérémonie de remise des prix",
+      description: "Trophées et récompenses de fin d'année",
+      theme: "Événements",
+      administrateurId: admin.id,
+      medias: [
+        { id: "ev1", key: "galerie/evenements/podium.jpg", url: "http://localhost:9000/bfa-media/galerie/evenements/podium.jpg", type: "image", nom: "podium.jpg" },
+        { id: "ev2", key: "galerie/evenements/coupe.jpg", url: "http://localhost:9000/bfa-media/galerie/evenements/coupe.jpg", type: "image", nom: "coupe.jpg" },
+        { id: "ev3", key: "galerie/evenements/discours.mp4", url: "http://localhost:9000/bfa-media/galerie/evenements/discours.mp4", type: "video", nom: "discours.mp4" },
+      ],
+    },
+    {
+      titre: "Portraits des jeunes talents",
+      description: "Séances photo des joueurs de l'académie",
+      theme: "Portraits",
+      administrateurId: admin.id,
+      medias: [
+        { id: "po1", key: "galerie/portraits/jean.jpg", url: "http://localhost:9000/bfa-media/galerie/portraits/jean.jpg", type: "image", nom: "jean.jpg" },
+        { id: "po2", key: "galerie/portraits/lucas.jpg", url: "http://localhost:9000/bfa-media/galerie/portraits/lucas.jpg", type: "image", nom: "lucas.jpg" },
+        { id: "po3", key: "galerie/portraits/landry.jpg", url: "http://localhost:9000/bfa-media/galerie/portraits/landry.jpg", type: "image", nom: "landry.jpg" },
+        { id: "po4", key: "galerie/portraits/cedric.jpg", url: "http://localhost:9000/bfa-media/galerie/portraits/cedric.jpg", type: "image", nom: "cedric.jpg" },
+      ],
+    },
+  ];
+  for (const album of albumsData) {
+    await prisma.album.create({ data: album });
+  }
+  console.log(`  ✔ ${albumsData.length} albums créés (thèmes variés)`);
 
   // ---- Module 5 : Fiches techniques (une par catégorie) ----
   const fichesData = [

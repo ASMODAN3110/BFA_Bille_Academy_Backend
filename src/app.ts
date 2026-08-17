@@ -14,6 +14,10 @@ import playerRoutes from "./routes/playerRoutes";
 import playerAdminRoutes from "./routes/playerAdminRoutes";
 import eventRoutes from "./routes/eventRoutes";
 import eventAdminRoutes from "./routes/eventAdminRoutes";
+import trialRoutes from "./routes/trialRoutes";
+import trialAdminRoutes from "./routes/trialAdminRoutes";
+import albumRoutes from "./routes/albumRoutes";
+import albumAdminRoutes from "./routes/albumAdminRoutes";
 import mediaRoutes from "./routes/mediaRoutes";
 import { authenticate } from "./middlewares/auth";
 
@@ -30,6 +34,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/players", playerRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/trials", trialRoutes);
+app.use("/api/albums", albumRoutes);
 
 // ---- Routes protégées (back-office) ----
 // `/admin/players` et `/admin/events` sont montés avant `/admin` : plus spécifiques, ils sont
@@ -37,6 +43,8 @@ app.use("/api/events", eventRoutes);
 app.use("/admin/players", authenticate, playerAdminRoutes);
 app.use("/admin/events", authenticate, eventAdminRoutes);
 app.use("/admin/media", authenticate, mediaRoutes);
+app.use("/admin/trials", authenticate, trialAdminRoutes);
+app.use("/admin/albums", authenticate, albumAdminRoutes);
 app.use("/admin", authenticate, adminRoutes);
 
 // ---- 404 (après toutes les routes) ----
