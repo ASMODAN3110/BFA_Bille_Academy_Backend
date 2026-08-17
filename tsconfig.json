@@ -19,6 +19,6 @@
     "noEmit": true,
     "strict": true
   },
-  "include": ["src/**/*.ts", "prisma/seed.ts"],
+  "include": ["src/**/*.ts", "prisma/seed.ts", "scripts/**/*.ts"],
   "exclude": ["node_modules", "generated/prisma", "dist"]
 }

@@ -12,6 +12,8 @@
 services:
   app:
     build: .
+    depends_on:
+      - minio
     environment:
       # Depuis le conteneur, `localhost` désigne le conteneur lui-même :
       # on utilise `host.docker.internal` pour joindre le PostgreSQL hôte.
@@ -19,5 +21,30 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_docker}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       PORT: 4000
+      # S3/MinIO — depuis le conteneur, "minio" est le nom de service compose
+      # (jamais localhost). S3_ENDPOINT est en DUR : une interpolation ${S3_ENDPOINT:-...}
+      # injecterait la valeur host "localhost:9000" du .env et casserait la connexion.
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-http://localhost:9000}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-bfa-media}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin123}
     ports:
       - "4000:4000"
+
+  minio:
+    image: minio/minio:latest
+    container_name: bfa-minio
+    ports:
+      - "9000:9000"   # API S3 (port publié → c'est lui que le navigateur utilise via S3_PUBLIC_URL)
+      - "9001:9001"   # Console web (http://localhost:9001)
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  minio_data:

@@ -14,6 +14,7 @@ import playerRoutes from "./routes/playerRoutes";
 import playerAdminRoutes from "./routes/playerAdminRoutes";
 import eventRoutes from "./routes/eventRoutes";
 import eventAdminRoutes from "./routes/eventAdminRoutes";
+import mediaRoutes from "./routes/mediaRoutes";
 import { authenticate } from "./middlewares/auth";
 
 const app = express();
@@ -35,6 +36,7 @@ app.use("/api/events", eventRoutes);
 // traités directement (sans transiter par le routeur admin ni relancer `authenticate`).
 app.use("/admin/players", authenticate, playerAdminRoutes);
 app.use("/admin/events", authenticate, eventAdminRoutes);
+app.use("/admin/media", authenticate, mediaRoutes);
 app.use("/admin", authenticate, adminRoutes);
 
 // ---- 404 (après toutes les routes) ----
