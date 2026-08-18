@@ -25,6 +25,10 @@ import blogAdminRoutes from "./routes/blogAdminRoutes";
 import resultRoutes from "./routes/resultRoutes";
 import resultAdminRoutes from "./routes/resultAdminRoutes";
 import rankingRoutes from "./routes/rankingRoutes";
+import productRoutes from "./routes/productRoutes";
+import productAdminRoutes from "./routes/productAdminRoutes";
+import quoteRoutes from "./routes/quoteRoutes";
+import quoteAdminRoutes from "./routes/quoteAdminRoutes";
 import mediaRoutes from "./routes/mediaRoutes";
 import { authenticate } from "./middlewares/auth";
 
@@ -47,6 +51,8 @@ app.use("/api/team-sheets", teamSheetRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/rankings", rankingRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/quotes", quoteRoutes);
 
 // ---- Routes protégées (back-office) ----
 // `/admin/players` et `/admin/events` sont montés avant `/admin` : plus spécifiques, ils sont
@@ -59,6 +65,8 @@ app.use("/admin/albums", authenticate, albumAdminRoutes);
 app.use("/admin/team-sheets", authenticate, teamSheetAdminRoutes);
 app.use("/admin/blog", authenticate, blogAdminRoutes);
 app.use("/admin/results", authenticate, resultAdminRoutes);
+app.use("/admin/products", authenticate, productAdminRoutes);
+app.use("/admin/quotes", authenticate, quoteAdminRoutes);
 app.use("/admin", authenticate, adminRoutes);
 
 // ---- 404 (après toutes les routes) ----

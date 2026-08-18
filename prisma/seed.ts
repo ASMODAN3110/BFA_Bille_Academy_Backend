@@ -460,57 +460,66 @@ async function main() {
   }
   console.log("  ✔ classements recalculés (U9, U15, U17)");
 
-  // ---- Module 8 : Produits + Devis ----
-  const maillot = await prisma.produit.create({
-    data: {
-      nom: "Maillot domicile BFA U15",
-      description: "Maillot officiel de l'académie, tissu respirant, écusson brodé.",
-      prix: 25000,
-      image: "/images/produits/maillot-domicile.jpg",
-      tailles: ["S", "M", "L", "XL"],
-      administrateurId: admin.id,
-    },
-  });
+  // ---- Module 8 : Boutique (produits + devis) ----
+  const produitsData: {
+    nom: string;
+    description: string;
+    prix: number;
+    image: string;
+    tailles: ("S" | "M" | "L" | "XL" | "UNIQUE")[];
+    categorie: string;
+    estNouveau: boolean;
+    stock: number;
+  }[] = [
+    { nom: "Maillot domicile BFA", description: "Maillot officiel de l'académie, tissu respirant, écusson brodé.", prix: 25000, image: "/images/produits/maillot-domicile.jpg", tailles: ["S", "M", "L", "XL"], categorie: "Vêtements", estNouveau: false, stock: 25 },
+    { nom: "Maillot extérieur BFA", description: "Maillot extérieur aux couleurs de l'académie, manches longues.", prix: 28000, image: "/images/produits/maillot-exterieur.jpg", tailles: ["S", "M", "L", "XL"], categorie: "Vêtements", estNouveau: true, stock: 12 },
+    { nom: "Survêtement training BFA", description: "Survêtement deux pièces pour les entraînements et déplacements.", prix: 45000, image: "/images/produits/survetement.jpg", tailles: ["S", "M", "L", "XL"], categorie: "Vêtements", estNouveau: false, stock: 8 },
+    { nom: "Short officiel BFA", description: "Short de match officiel, léger et respirant.", prix: 12000, image: "/images/produits/short.jpg", tailles: ["S", "M", "L", "XL"], categorie: "Vêtements", estNouveau: false, stock: 30 },
+    { nom: "Ballon officiel BFA", description: "Ballon de match officiel aux couleurs de l'académie.", prix: 18000, image: "/images/produits/ballon.jpg", tailles: ["UNIQUE"], categorie: "Équipement", estNouveau: false, stock: 20 },
+    { nom: "Sac de sport BFA", description: "Grand sac de sport compartimenté au logo de l'académie.", prix: 20000, image: "/images/produits/sac.jpg", tailles: ["UNIQUE"], categorie: "Équipement", estNouveau: true, stock: 5 },
+    { nom: "Écharpe supporters BFA", description: "Écharpe aux couleurs de l'académie pour supporter les équipes.", prix: 5000, image: "/images/produits/echarpe.jpg", tailles: ["UNIQUE"], categorie: "Accessoires", estNouveau: false, stock: 50 },
+    { nom: "Casquette BFA", description: "Casquette brodée au logo, taille unique ajustable.", prix: 7000, image: "/images/produits/casquette.jpg", tailles: ["UNIQUE"], categorie: "Accessoires", estNouveau: false, stock: 0 },
+  ];
 
-  await prisma.produit.create({
-    data: {
-      nom: "Écharpe supporters BFA",
-      description: "Écharpe aux couleurs de l'académie pour supporter les équipes.",
-      prix: 5000,
-      image: "/images/produits/echarpe.jpg",
-      tailles: ["L"],
-      administrateurId: admin.id,
-    },
-  });
+  const produits = new Map<string, number>();
+  for (const p of produitsData) {
+    const cree = await prisma.produit.create({ data: { ...p, administrateurId: admin.id } });
+    produits.set(p.nom, cree.id);
+  }
+  console.log(`  ✔ ${produitsData.length} produits créés (boutique)`);
 
-  await prisma.devis.create({
-    data: {
-      nomComplet: "Marie Abena",
-      email: "marie.abena@example.com",
-      telephone: "+237 670 000 000",
-      quantite: 10,
-      taille: "L",
-      message: "Pour l'équipe des supporters du quartier.",
-      estTraite: false,
-      produitId: maillot.id,
-      administrateurId: admin.id,
-    },
-  });
+  const devisData: {
+    nomComplet: string;
+    email: string;
+    telephone: string;
+    quantite: number;
+    taille: "S" | "M" | "L" | "XL" | "UNIQUE";
+    message: string;
+    estTraite: boolean;
+    produit: string;
+  }[] = [
+    { nomComplet: "Marie Abena", email: "marie.abena@example.com", telephone: "+237 670 000 000", quantite: 10, taille: "L", message: "Pour l'équipe des supporters du quartier.", estTraite: false, produit: "Maillot domicile BFA" },
+    { nomComplet: "Paul Simo", email: "paul.simo@example.com", telephone: "+237 650 000 000", quantite: 2, taille: "XL", message: "Maillots pour mes deux enfants joueurs à l'académie.", estTraite: true, produit: "Maillot extérieur BFA" },
+    { nomComplet: "Jean Mbarga", email: "jean.mbarga@example.com", telephone: "+237 690 000 000", quantite: 5, taille: "UNIQUE", message: "Pour le club de mon quartier.", estTraite: false, produit: "Ballon officiel BFA" },
+    { nomComplet: "Nadia Fotso", email: "nadia.fotso@example.com", telephone: "+237 660 000 000", quantite: 20, taille: "UNIQUE", message: "Commandée pour la kermesse de l'école.", estTraite: true, produit: "Casquette BFA" },
+  ];
 
-  await prisma.devis.create({
-    data: {
-      nomComplet: "Paul Simo",
-      email: "paul.simo@example.com",
-      telephone: "+237 650 000 000",
-      quantite: 2,
-      taille: "XL",
-      message: "Maillots pour mes deux enfants joueurs à l'académie.",
-      estTraite: true,
-      produitId: maillot.id,
-      administrateurId: admin.id,
-    },
-  });
-  console.log("  ✔ 2 produits et 2 devis créés");
+  for (const d of devisData) {
+    await prisma.devis.create({
+      data: {
+        nomComplet: d.nomComplet,
+        email: d.email,
+        telephone: d.telephone,
+        quantite: d.quantite,
+        taille: d.taille,
+        message: d.message,
+        estTraite: d.estTraite,
+        produitId: produits.get(d.produit)!,
+        administrateurId: admin.id,
+      },
+    });
+  }
+  console.log(`  ✔ ${devisData.length} demandes de devis créées`);
 
   console.log("\n✅ Seed terminé avec succès !");
 }

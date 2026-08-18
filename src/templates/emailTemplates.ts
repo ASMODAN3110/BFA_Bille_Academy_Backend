@@ -2,7 +2,10 @@
 // Emails HTML simples (styles inline) envoyés au demandeur d'essai : accusé de
 // réception, confirmation, refus. Utilisés par `src/services/emailService.ts`.
 
-import type { DemandeEssai } from "../../generated/prisma/client";
+import type { DemandeEssai, Prisma } from "../../generated/prisma/client";
+
+/** Devis avec son produit, renvoyé par `quoteService` et consommé par les templates. */
+export type DevisAvecProduit = Prisma.DevisGetPayload<{ include: { produit: true } }>;
 
 /** Date d'essai formatée en français (ex: 27/08/2026). */
 function dateFr(date: Date): string {
@@ -68,5 +71,39 @@ export function templateRefusEssai(demande: DemandeEssai): { subject: string; ht
        malheureusement pas en mesure de donner suite à votre candidature.</p>
     <p><strong>Motif :</strong> ${demande.motifRefus ?? "Non précisé."}</p>
     <p>Nous vous encourageons à retenter votre chance à la prochaine session de détection.</p>`;
+  return { subject, html: html(subject, corps) };
+}
+
+// =====================================================================
+// Module 8 — Boutique : emails des demandes de devis (@EF42)
+// =====================================================================
+
+/** Confirmation envoyée au client (@EF42). */
+export function templateConfirmationDevis(devis: DevisAvecProduit): { subject: string; html: string } {
+  const subject = "BFA Bille Academy — Demande de devis reçue";
+  const corps = `
+    <p>Bonjour ${devis.nomComplet},</p>
+    <p>Votre demande de devis pour le produit <strong>${devis.produit.nom}</strong>
+       (quantité : ${devis.quantite}) a bien été prise en compte.</p>
+    <p>Notre équipe vous contactera très rapidement au <strong>${devis.telephone}</strong>
+       pour finaliser votre commande.</p>
+    <p>Merci pour votre confiance !</p>`;
+  return { subject, html: html(subject, corps) };
+}
+
+/** Notification à l'académie (@EF42). Destinataire : contact@bfa-bille-academy.com. */
+export function templateNotificationDevis(devis: DevisAvecProduit): { subject: string; html: string } {
+  const subject = `BFA Bille Academy — Nouvelle demande de devis : ${devis.produit.nom}`;
+  const corps = `
+    <p>Une nouvelle demande de devis vient d'être soumise sur la boutique :</p>
+    <ul>
+      <li><strong>Produit :</strong> ${devis.produit.nom}</li>
+      <li><strong>Quantité :</strong> ${devis.quantite}</li>
+      <li><strong>Taille :</strong> ${devis.taille ?? "—"}</li>
+      <li><strong>Client :</strong> ${devis.nomComplet} (${devis.email})</li>
+      <li><strong>Téléphone :</strong> ${devis.telephone}</li>
+      <li><strong>Message :</strong> ${devis.message ?? "—"}</li>
+    </ul>
+    <p>Répondez au client pour finaliser la demande.</p>`;
   return { subject, html: html(subject, corps) };
 }

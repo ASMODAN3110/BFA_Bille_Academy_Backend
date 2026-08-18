@@ -51,6 +51,7 @@ enum Taille {
   M
   L
   XL
+  UNIQUE
 }
 
 // =====================================================================
@@ -249,6 +250,11 @@ model Produit {
   prix             Float
   image            String?
   tailles          Taille[]
+  categorie        String          @default("Vêtements") // Vêtements | Équipement | Accessoires
+  estNouveau       Boolean         @default(false)
+  stock            Int             @default(0)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @default(now()) @updatedAt
 
   administrateurId Int?
   gereePar         Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
