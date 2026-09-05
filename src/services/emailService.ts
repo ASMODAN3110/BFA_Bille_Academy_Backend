@@ -46,7 +46,6 @@ function getTransporter(): Transporter {
  */
 async function envoyerEmail(to: string, subject: string, html: string): Promise<void> {
   if (!emailConfigure()) {
-    console.log("[EMAIL DEV]", { to, subject });
     return;
   }
   try {
