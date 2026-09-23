@@ -5,20 +5,42 @@ generated/prisma
 # --- Secrets / environnement ---
 .env
 .env.*
+!.env.example
 
 # --- Git ---
 .git
+.gitignore
 
 # --- Logs / cache / build ---
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 logs
 .cache
 dist
 build
 coverage
 
+# --- Tests (optionnel : à retirer si vous testez dans le conteneur) ---
+# tests
+# __tests__
+# *.test.ts
+# *.spec.ts
+
+# --- Documentation ---
+README.md
+CHANGELOG.md
+LICENSE
+docs
+
+# --- Système ---
+.DS_Store
+Thumbs.db
+
 # --- Dossiers d'agents IA / IDE (inutiles dans l'image) ---
 .claude
 .agents
 .windsurf
 .idea
+.vscode
