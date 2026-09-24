@@ -40,6 +40,15 @@ app.use(cors()); // le frontend React tourne sur un autre port en dev
 app.use(morgan("dev")); // logs HTTP
 app.use(express.json()); // parsing du body JSON
 
+// ---- Healthcheck (utilisé par Docker / Traefik) ----
+app.get("/health", (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ---- Routes publiques ----
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
