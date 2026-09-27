@@ -5,7 +5,7 @@
 // Convention service : `{ ok, data?, message?, code? }`, jamais d'erreur HTTP.
 
 import prisma from "../config/database";
-import type { Prisma, Taille } from "../../generated/prisma/client";
+import type { Prisma, Produit, Taille } from "../../generated/prisma/client";
 import { BUCKET, S3_PUBLIC_URL } from "../config/s3";
 import { deleteFile } from "./storageService";
 
@@ -13,13 +13,13 @@ type CodeErreur = "PRODUIT_INTROUVABLE";
 
 export interface ProduitOperation {
   ok: boolean;
-  data?: Prisma.ProduitGetPayload<{}> | ListeProduits;
+  data?: Produit | ListeProduits;
   message?: string;
   code?: CodeErreur;
 }
 
 export interface ListeProduits {
-  items: Prisma.ProduitGetPayload<{}>[];
+  items: Produit[];
   total: number;
   page: number;
   limit: number;
