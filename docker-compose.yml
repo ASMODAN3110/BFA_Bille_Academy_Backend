@@ -44,6 +44,7 @@ services:
   minio:
     image: minio/minio:latest
     container_name: bfa-minio
+    pull_policy: never
     ports:
       - "9000:9000"   # API S3 (port publié → c'est lui que le navigateur utilise via S3_PUBLIC_URL)
       - "9001:9001"   # Console web (http://localhost:9001)

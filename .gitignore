@@ -52,6 +52,11 @@ coverage/
 Thumbs.db
 
 # ------------------------------------------------------------------
+# Artéfacts de tests manuels (payloads curl, réponses JSON)
+# ------------------------------------------------------------------
+test-*.json
+
+# ------------------------------------------------------------------
 # Agents IA : Claude Code, Windsurf, skills de plugins
 # ------------------------------------------------------------------
 # `.claude/` est versionné : il contient les instructions partagées du projet

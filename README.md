@@ -51,6 +51,9 @@ L'API démarre sur le port défini par `PORT` (défaut : 3000, 4000 dans `.env.e
 | `npm run minio:start` | Démarre MinIO via Docker Compose |
 | `npm run minio:stop` | Arrête MinIO |
 | `npm run minio:create-bucket` | Crée le bucket S3 + policy public-read |
+| `npm run lint` | ESLint sur `src/` et `tests/` (flat config) |
+| `npm test` | Tests unitaires Vitest avec couverture V8 (seuils 70%) |
+| `npm run test:watch` | Vitest en mode watch |
 
 ## Architecture
 
@@ -171,6 +174,27 @@ Voir [.env.example](.env.example) pour la liste complète :
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Identifiants S3 |
 | `EMAIL_ENABLED` | `1` pour activer l'envoi réel d'emails |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Configuration SMTP |
+
+## Qualité — Lint et tests unitaires
+
+### ESLint
+
+Configuration flat (`eslint.config.js`) couvrant `src/**/*.ts` et `tests/**/*.ts` :
+
+```bash
+npm run lint
+```
+
+### Tests unitaires (Vitest)
+
+```bash
+npm test                # run unique + rapport de couverture V8 (text + lcov dans coverage/)
+npm run test:watch      # mode watch
+```
+
+- **461 tests** répartis sur 32 fichiers dans `tests/` — validators, services (mocks Prisma), controllers (mocks services), templates email et utils.
+- Les tests sont **entièrement isolés** : Prisma et les services externes (email, S3) sont mockés — aucune base PostgreSQL ni MinIO requis.
+- **Seuils de couverture** (configurés dans `vitest.config.ts`, la commande échoue en dessous) : statements, branches, fonctions, lignes ≥ 70%.
 
 ## Déploiement
 
