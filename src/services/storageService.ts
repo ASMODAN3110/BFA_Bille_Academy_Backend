@@ -18,6 +18,7 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import sharp from "sharp";
 import { BUCKET, s3Client, S3_PUBLIC_URL } from "../config/s3";
 
 /** Dossiers autorisés — ils deviennent le préfixe de la clé (et le tri de la galerie). */
@@ -31,6 +32,38 @@ const MIME_EXTENSIONS: Record<string, string> = {
   "video/mp4": ".mp4",
   "video/webm": ".webm",
 };
+
+/** Mimetypes d'images (convertis en WebP à l'upload). */
+const IMAGE_MIMES = ["image/jpeg", "image/png"];
+
+/** Largeur maximale des images converties en WebP (redimensionnement proportionnel). */
+const MAX_WIDTH = 1280;
+
+/** Qualité WebP (0-100) — 80 est un bon compromis qualité/taille. */
+const WEBP_QUALITY = 80;
+
+/**
+ * Convertit une image (JPEG/PNG) en WebP avec redimensionnement proportionnel.
+ * Les vidéos et autres formats sont renvoyés tels quels.
+ * @returns buffer converti, mimetype et extension
+ */
+async function optimiserImage(fichier: FichierUpload): Promise<{
+  buffer: Buffer;
+  mimetype: string;
+  extension: string;
+}> {
+  if (!IMAGE_MIMES.includes(fichier.mimetype)) {
+    const extension = MIME_EXTENSIONS[fichier.mimetype];
+    return { buffer: fichier.buffer, mimetype: fichier.mimetype, extension };
+  }
+
+  const buffer = await sharp(fichier.buffer)
+    .resize({ width: MAX_WIDTH, withoutEnlargement: true })
+    .webp({ quality: WEBP_QUALITY })
+    .toBuffer();
+
+  return { buffer, mimetype: "image/webp", extension: ".webp" };
+}
 
 /**
  * URL publique (lecture) d'une clé — la valeur stockée en base par les contrôleurs d'entités.
@@ -99,7 +132,8 @@ export interface MediaStocke {
   url: string;
 }
 
-/** Upload un fichier (en mémoire) vers MinIO, dans un dossier autorisé. */
+/** Upload un fichier (en mémoire) vers MinIO, dans un dossier autorisé.
+ *  Les images (JPEG/PNG) sont converties en WebP (redimensionnées à 1280px max, qualité 80). */
 export async function uploadFile({
   dossier,
   fichier,
@@ -107,20 +141,16 @@ export async function uploadFile({
   dossier: Dossier;
   fichier: FichierUpload;
 }): Promise<MediaStocke> {
-  const extension = MIME_EXTENSIONS[fichier.mimetype];
-  if (!extension) {
-    // Normalement inatteignable : le middleware d'upload filtre déjà les mimetypes.
-    throw new Error(`Type de fichier non supporté : ${fichier.mimetype}`);
-  }
+  const { buffer, mimetype, extension } = await optimiserImage(fichier);
 
   const key = `${dossier}/${randomUUID()}${extension}`;
   await s3Client.send(
     new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
-      Body: fichier.buffer,
-      ContentType: fichier.mimetype,
-      ContentLength: fichier.buffer.length,
+      Body: buffer,
+      ContentType: mimetype,
+      ContentLength: buffer.length,
     }),
   );
   return { key, url: getFileUrl(key) };
