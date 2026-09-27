@@ -20,6 +20,23 @@ function parseId(value: string | string[]): number {
   return Number.isInteger(n) && n > 0 ? n : 0;
 }
 
+/** Calcule l'âge à partir d'une date de naissance (ENF-SEC-04 : ne pas exposer la date). */
+function calculerAge(dateNaissance: Date): number {
+  const aujourdhui = new Date();
+  let age = aujourdhui.getFullYear() - dateNaissance.getFullYear();
+  const mois = aujourdhui.getMonth() - dateNaissance.getMonth();
+  if (mois < 0 || (mois === 0 && aujourdhui.getDate() < dateNaissance.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+/** Retourne une version publique du joueur (sans dateNaissance, avec âge calculé). */
+function joueurPublic(joueur: Record<string, unknown>) {
+  const { dateNaissance, ...rest } = joueur;
+  return { ...rest, age: calculerAge(new Date(dateNaissance as string)) };
+}
+
 /**
  * GET /api/players — Liste publique des joueurs (@EF1).
  * Query : `page` (défaut 1), `limit` (défaut 20, max 100), `categorieId` (optionnel).
@@ -53,12 +70,19 @@ export async function getAll(req: Request, res: Response): Promise<void> {
 
   res.json({
     success: true,
-    data: { items, total, page, limit, totalPages: Math.ceil(total / limit) },
+    data: {
+      items: items.map(joueurPublic),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
   });
 }
 
 /**
  * GET /api/players/:id — Fiche détaillée d'un joueur (@EF2), catégorie incluse.
+ * ENF-SEC-04 : `dateNaissance` remplacée par `age` calculé (protection mineurs).
  */
 export async function getById(req: Request, res: Response): Promise<void> {
   const id = parseId(req.params.id);
@@ -77,7 +101,7 @@ export async function getById(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  res.json({ success: true, data: joueur });
+  res.json({ success: true, data: joueurPublic(joueur) });
 }
 
 /**
