@@ -15,6 +15,19 @@
 
 import prisma from "../config/database";
 import type { Article, CategorieArticle, Prisma } from "../../generated/prisma/client";
+import { sanitize } from "isomorphic-dompurify";
+
+/** Sanitise le HTML du contenu d'un article (supprime scripts, event handlers, etc.). */
+function assainirContenu(contenu: string): string {
+  return sanitize(String(contenu), {
+    ALLOWED_TAGS: [
+      "p", "br", "strong", "em", "u", "s", "h1", "h2", "h3", "h4", "h5", "h6",
+      "ul", "ol", "li", "a", "img", "blockquote", "pre", "code", "span", "div",
+      "figure", "figcaption", "hr", "table", "thead", "tbody", "tr", "th", "td",
+    ],
+    ALLOWED_ATTR: ["href", "src", "alt", "title", "class", "target", "rel", "width", "height"],
+  });
+}
 
 /** Article de liste/détail enrichi de l'extrait calculé. */
 export type ArticleDetail = Article & { extrait: string };
@@ -183,7 +196,7 @@ export async function creerArticle(
   const article = await prisma.article.create({
     data: {
       titre: (body.titre as string).trim(),
-      contenu: (body.contenu as string).trim(),
+      contenu: assainirContenu((body.contenu as string).trim()),
       categorie: (body.categorie as string).trim() as CategorieArticle,
       auteur: (body.auteur as string).trim(),
       image:
@@ -217,7 +230,7 @@ export async function modifierArticle(
     where: { id },
     data: {
       titre: (body.titre as string).trim(),
-      contenu: (body.contenu as string).trim(),
+      contenu: assainirContenu((body.contenu as string).trim()),
       categorie: (body.categorie as string).trim() as CategorieArticle,
       auteur: (body.auteur as string).trim(),
       image:
@@ -252,7 +265,7 @@ export async function modifierArticlePartielle(
   // Variante Unchecked : assigne la clé étrangère (`administrateurId`) directement.
   const data: Prisma.ArticleUncheckedUpdateInput = { administrateurId: adminId };
   if (body.titre !== undefined) data.titre = (body.titre as string).trim();
-  if (body.contenu !== undefined) data.contenu = (body.contenu as string).trim();
+  if (body.contenu !== undefined) data.contenu = assainirContenu((body.contenu as string).trim());
   if (body.categorie !== undefined) {
     data.categorie = (body.categorie as string).trim() as CategorieArticle;
   }
