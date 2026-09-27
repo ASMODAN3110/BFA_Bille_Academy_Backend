@@ -10,6 +10,7 @@ import morgan from "morgan";
 import authRoutes from "./routes/authRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
+import categoryAdminRoutes from "./routes/categoryAdminRoutes";
 import playerRoutes from "./routes/playerRoutes";
 import playerAdminRoutes from "./routes/playerAdminRoutes";
 import eventRoutes from "./routes/eventRoutes";
@@ -67,6 +68,7 @@ app.use("/api/quotes", quoteRoutes);
 // `/admin/players` et `/admin/events` sont montés avant `/admin` : plus spécifiques, ils sont
 // traités directement (sans transiter par le routeur admin ni relancer `authenticate`).
 app.use("/admin/players", authenticate, playerAdminRoutes);
+app.use("/admin/categories", authenticate, categoryAdminRoutes);
 app.use("/admin/events", authenticate, eventAdminRoutes);
 app.use("/admin/media", authenticate, mediaRoutes);
 app.use("/admin/trials", authenticate, trialAdminRoutes);
