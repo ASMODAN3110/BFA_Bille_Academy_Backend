@@ -14,9 +14,25 @@ if (!process.env.JWT_SECRET) {
 const PORT = Number(process.env.PORT ?? 3000);
 
 app.listen(PORT, () => {
-  // Préparation du bucket S3/MinIO, sans bloquer le serveur si MinIO est indisponible.
   ensureBucket()
+    .then(() => {
+      console.log("✅ S3 (Garage) connecté, bucket vérifié :", process.env.S3_BUCKET);
+    })
     .catch((err: unknown) => {
-      console.warn(`MinIO indisponible (bucket non vérifié) : ${(err as Error).message}`);
+      const e = err as {
+        name?: string;
+        message?: string;
+        $metadata?: { httpStatusCode?: number };
+        Code?: string;
+      };
+      console.error("❌ S3 indisponible :", {
+        name: e.name,
+        message: e.message,
+        code: e.Code,
+        httpStatus: e.$metadata?.httpStatusCode,
+        endpoint: process.env.S3_ENDPOINT,
+        region: process.env.S3_REGION,
+        bucket: process.env.S3_BUCKET,
+      });
     });
 });
