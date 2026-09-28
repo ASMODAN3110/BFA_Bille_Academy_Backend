@@ -53,6 +53,25 @@ export async function login(req: Request, res: Response): Promise<void> {
 }
 
 /**
+ * Validation de session — GET /api/auth/me.
+ * Requiert le middleware `authenticate` (injecte `req.user`).
+ * 200 → `{ success, user }` · 401 → token invalide ou admin supprimé.
+ */
+export async function me(req: Request, res: Response): Promise<void> {
+  const admin = await prisma.administrateur.findUnique({
+    where: { id: req.user!.id },
+    select: { id: true, nom: true, email: true, role: true },
+  });
+
+  if (!admin) {
+    res.status(401).json({ success: false, message: "Session expirée" });
+    return;
+  }
+
+  res.json({ success: true, user: admin });
+}
+
+/**
  * Déconnexion — stateless : le backend n'a rien à révoquer.
  * La suppression du token est gérée côté client (localStorage / cookie).
  */

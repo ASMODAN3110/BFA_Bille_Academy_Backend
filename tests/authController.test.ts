@@ -15,7 +15,7 @@ vi.mock('../src/config/database', () => ({ default: mockPrisma }))
 vi.mock('../src/services/jwtService', () => ({ signToken: mockSignToken }))
 vi.mock('bcryptjs', () => ({ default: { compare: mockBcryptCompare } }))
 
-import { login, logout } from '../src/controllers/authController'
+import { login, logout, me } from '../src/controllers/authController'
 import type { Request, Response } from 'express'
 
 function mockRes(): Response {
@@ -91,6 +91,30 @@ describe('authController — login', () => {
         data: expect.objectContaining({ derniereConnexion: expect.any(Date) }),
       }),
     )
+  })
+})
+
+describe('authController — me', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('retourne l\'administrateur courant quand le token est valide', async () => {
+    const admin = { id: 1, nom: 'Admin', email: 'admin@test.com', role: 'SUPER_ADMIN' }
+    mockPrisma.administrateur.findUnique.mockResolvedValue(admin)
+    const req = { user: { id: 1, email: 'admin@test.com', role: 'SUPER_ADMIN' } } as unknown as Request
+    const res = mockRes()
+    await me(req, res)
+    expect(mockPrisma.administrateur.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 1 } }),
+    )
+    expect(res.json).toHaveBeenCalledWith({ success: true, user: admin })
+  })
+
+  it('retourne 401 si l\'admin n\'existe plus', async () => {
+    mockPrisma.administrateur.findUnique.mockResolvedValue(null)
+    const req = { user: { id: 99, email: 'gone@test.com', role: 'ADMIN' } } as unknown as Request
+    const res = mockRes()
+    await me(req, res)
+    expect(res.status).toHaveBeenCalledWith(401)
   })
 })
 
