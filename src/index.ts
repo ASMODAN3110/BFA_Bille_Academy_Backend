@@ -16,6 +16,7 @@ const PORT = Number(process.env.PORT ?? 3000);
 app.listen(PORT, () => {
   ensureBucket()
     .then(() => {
+      // eslint-disable-next-line no-console
       console.log("✅ S3 (Garage) connecté, bucket vérifié :", process.env.S3_BUCKET);
     })
     .catch((err: unknown) => {
