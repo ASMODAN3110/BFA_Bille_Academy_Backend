@@ -1,10 +1,10 @@
 // Service email Module 3 — BFA Bille Football Academy
-// BEST-EFFORT : sans `EMAIL_ENABLED=1` + `SMTP_HOST` configurés, les emails sont loggés
-// en console (`[EMAIL DEV]`) au lieu d'être envoyés. Un échec d'envoi est loggé mais ne
-// rejette JAMAIS la promesse : la réponse HTTP n'est jamais bloquée. Le module fonctionne
-// donc sans aucune infrastructure email en dev (comme le bucket S3 auto-créé).
+// Envoi via l'API Resend (https://resend.com) — HTTPS, pas de SMTP.
+// BEST-EFFORT : sans `EMAIL_ENABLED=1` + `RESEND_API_KEY` configurés, les emails sont
+// ignorés silencieusement (mode dev). Un échec d'envoi est loggé mais ne rejette JAMAIS
+// la promesse : la réponse HTTP n'est jamais bloquée.
 
-import nodemailer, { type Transporter } from "nodemailer";
+import { Resend } from "resend";
 import type { DemandeEssai } from "../../generated/prisma/client";
 import {
   templateAccuseReception,
@@ -15,32 +15,26 @@ import {
   type DevisAvecProduit,
 } from "../templates/emailTemplates";
 
-/** Vrai si l'envoi réel d'emails est activé (EMAIL_ENABLED=1 + SMTP_HOST renseigné). */
+/** Vrai si l'envoi réel d'emails est activé (EMAIL_ENABLED=1 + RESEND_API_KEY renseignée). */
 function emailConfigure(): boolean {
-  return process.env.EMAIL_ENABLED === "1" && Boolean(process.env.SMTP_HOST);
+  return process.env.EMAIL_ENABLED === "1" && Boolean(process.env.RESEND_API_KEY);
 }
 
-/** Transporteur nodemailer, créé paresseusement au premier envoi réel. */
-let transporter: Transporter | null = null;
+/** Client Resend, créé paresseusement au premier envoi réel. */
+let resend: Resend | null = null;
 
-function getTransporter(): Transporter {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT ?? 587),
-      secure: process.env.SMTP_PORT === "465",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+function getResend(): Resend {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
   }
-  return transporter;
+  return resend;
 }
 
 /**
- * Envoie un email — ou le logge en console en mode dev. Ne rejette jamais.
- * @param to destinataire (email du demandeur)
+ * Envoie un email via Resend — ou l'ignore en mode dev. Ne rejette jamais.
+ * NB : `emails.send()` ne lève pas d'exception sur une erreur API, il retourne
+ * `{ data, error }` — il faut donc tester `error` explicitement.
+ * @param to destinataire
  * @param subject sujet de l'email
  * @param html contenu HTML de l'email
  */
@@ -49,12 +43,17 @@ async function envoyerEmail(to: string, subject: string, html: string): Promise<
     return;
   }
   try {
-    await getTransporter().sendMail({
-      from: process.env.SMTP_FROM ?? "BFA Bille Football Academy <no-reply@bfa-academy.com>",
+    const { error } = await getResend().emails.send({
+      from:
+        process.env.EMAIL_FROM ??
+        "BFA Bille Football Academy <no-reply@bille-football-academy.com>",
       to,
       subject,
       html,
     });
+    if (error) {
+      console.error("[EMAIL] Échec de l'envoi :", error);
+    }
   } catch (err) {
     console.error("[EMAIL] Échec de l'envoi :", err);
   }

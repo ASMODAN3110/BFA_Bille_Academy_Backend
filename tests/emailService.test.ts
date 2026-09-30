@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const { mockSendMail } = vi.hoisted(() => ({
-  mockSendMail: vi.fn().mockResolvedValue({ messageId: 'test' }),
+const { mockSend } = vi.hoisted(() => ({
+  mockSend: vi.fn().mockResolvedValue({ data: { id: 'test-id' }, error: null }),
 }))
 
-vi.mock('nodemailer', () => ({
-  default: {
-    createTransport: vi.fn().mockReturnValue({ sendMail: mockSendMail }),
+vi.mock('resend', () => ({
+  Resend: class {
+    emails = { send: mockSend }
   },
 }))
 
@@ -32,18 +32,18 @@ const devis = {
   produit: { id: 1, nom: 'Maillot BFA' },
 } as any
 
-describe('emailService — mode dev (pas de EMAIL_ENABLED)', () => {
+describe('emailService — mode dev (pas de RESEND_API_KEY)', () => {
   const oldEnv = process.env
 
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env = { ...oldEnv, EMAIL_ENABLED: '0', SMTP_HOST: '' }
+    process.env = { ...oldEnv, EMAIL_ENABLED: '0', RESEND_API_KEY: '' }
   })
   afterEach(() => { process.env = oldEnv })
 
   it('envoyerAccuseReception ne rejette pas (no-op en dev)', async () => {
     await expect(envoyerAccuseReception(demande)).resolves.toBeUndefined()
-    expect(mockSendMail).not.toHaveBeenCalled()
+    expect(mockSend).not.toHaveBeenCalled()
   })
 
   it('envoyerConfirmationEssai ne rejette pas', async () => {
@@ -63,7 +63,7 @@ describe('emailService — mode dev (pas de EMAIL_ENABLED)', () => {
   })
 })
 
-describe('emailService — mode prod (EMAIL_ENABLED=1 + SMTP)', () => {
+describe('emailService — mode prod (EMAIL_ENABLED=1 + Resend)', () => {
   const oldEnv = process.env
 
   beforeEach(() => {
@@ -71,17 +71,15 @@ describe('emailService — mode prod (EMAIL_ENABLED=1 + SMTP)', () => {
     process.env = {
       ...oldEnv,
       EMAIL_ENABLED: '1',
-      SMTP_HOST: 'smtp.test.com',
-      SMTP_PORT: '587',
-      SMTP_USER: 'user@test.com',
-      SMTP_PASS: 'pass',
+      RESEND_API_KEY: 're_test_key',
+      EMAIL_FROM: 'BFA <no-reply@test.com>',
     }
   })
   afterEach(() => { process.env = oldEnv })
 
-  it('envoyerAccuseReception appelle sendMail', async () => {
+  it('envoyerAccuseReception appelle resend.emails.send', async () => {
     await envoyerAccuseReception(demande)
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'jean@test.com',
         subject: expect.stringContaining('reçue'),
@@ -89,23 +87,23 @@ describe('emailService — mode prod (EMAIL_ENABLED=1 + SMTP)', () => {
     )
   })
 
-  it('envoyerConfirmationEssai appelle sendMail', async () => {
+  it('envoyerConfirmationEssai appelle resend.emails.send', async () => {
     await envoyerConfirmationEssai(demande)
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({ to: 'jean@test.com', subject: expect.stringContaining('confirmé') }),
     )
   })
 
-  it('envoyerRefusEssai appelle sendMail', async () => {
+  it('envoyerRefusEssai appelle resend.emails.send', async () => {
     await envoyerRefusEssai(demande)
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({ to: 'jean@test.com' }),
     )
   })
 
-  it('envoyerConfirmationDevis appelle sendMail', async () => {
+  it('envoyerConfirmationDevis appelle resend.emails.send', async () => {
     await envoyerConfirmationDevis(devis)
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({ to: 'jean@test.com', subject: expect.stringContaining('devis') }),
     )
   })
@@ -113,13 +111,18 @@ describe('emailService — mode prod (EMAIL_ENABLED=1 + SMTP)', () => {
   it('envoyerNotificationDevis utilise ACADEMY_EMAIL', async () => {
     process.env.ACADEMY_EMAIL = 'academy@test.com'
     await envoyerNotificationDevis(devis)
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({ to: 'academy@test.com' }),
     )
   })
 
-  it('gère un échec d\'envoi sans rejeter', async () => {
-    mockSendMail.mockRejectedValueOnce(new Error('SMTP error'))
+  it('gère un échec d\'envoi (throw réseau) sans rejeter', async () => {
+    mockSend.mockRejectedValueOnce(new Error('network error'))
+    await expect(envoyerAccuseReception(demande)).resolves.toBeUndefined()
+  })
+
+  it('gère une erreur API Resend ({ error }) sans rejeter', async () => {
+    mockSend.mockResolvedValueOnce({ data: null, error: { name: 'validation_error', message: 'invalid' } })
     await expect(envoyerAccuseReception(demande)).resolves.toBeUndefined()
   })
 })

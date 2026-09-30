@@ -12,7 +12,7 @@ API REST de la **BFA Bille Football Academy** (académie de football amateur au 
 - **MinIO** (stockage S3 des médias, `@aws-sdk/client-s3`)
 - **JWT** (`jsonwebtoken`) + **bcryptjs** (authentification)
 - **Multer** (upload multipart, memoryStorage, ≤ 10 Mo)
-- **Nodemailer** (emails SMTP, best-effort)
+- **Resend** (envoi d'emails via API HTTPS, best-effort)
 - **Helmet** + **CORS** + **Morgan** (sécurité et logs HTTP)
 
 ## Démarrage rapide
@@ -119,7 +119,7 @@ routes → controllers → services → prisma
 
 ## Emails
 
-- **Best-effort** : sans `EMAIL_ENABLED=1` + `SMTP_HOST`, les emails sont ignorés silencieusement.
+- **Best-effort** : sans `EMAIL_ENABLED=1` + `RESEND_API_KEY`, les emails sont ignorés silencieusement.
 - 5 templates HTML : accusé de réception (essai), confirmation essai, refus essai, confirmation devis, notification devis.
 - Un échec d'envoi est loggé mais ne bloque jamais la réponse HTTP.
 
@@ -173,7 +173,9 @@ Voir [.env.example](.env.example) pour la liste complète :
 | `S3_BUCKET` | Nom du bucket (défaut : `bfa-media`) |
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Identifiants S3 |
 | `EMAIL_ENABLED` | `1` pour activer l'envoi réel d'emails |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Configuration SMTP |
+| `RESEND_API_KEY` | Clé API Resend (https://resend.com) |
+| `EMAIL_FROM` | Expéditeur, ex. `BFA <no-reply@domaine.com>` (domaine vérifié dans Resend) |
+| `ACADEMY_EMAIL` | Boîte de réception des notifications devis |
 
 ## Qualité — Lint et tests unitaires
 
