@@ -9,6 +9,7 @@ import type { Request, Response } from "express";
 import prisma from "../config/database";
 import { validatePlayerInput } from "../utils/playerValidator";
 import { verifierAgeEtCategorie, verifierAgeMinimum } from "../services/playerService";
+import { genererFicheJoueurPdf, slugFichier } from "../services/pdfService";
 
 /**
  * Convertit un paramètre d'URL en entier positif ; renvoie 0 si invalide (<= 0 ou non entier).
@@ -102,6 +103,40 @@ export async function getById(req: Request, res: Response): Promise<void> {
   }
 
   res.json({ success: true, data: joueurPublic(joueur) });
+}
+
+/**
+ * GET /admin/players/:id/export-pdf — Export PDF de la fiche joueur (une page A4).
+ * Renvoie le fichier en `attachment` ; une erreur de génération renvoie un 500 JSON.
+ */
+export async function exportPdf(req: Request, res: Response): Promise<void> {
+  const id = parseId(req.params.id);
+  if (!id) {
+    res.status(400).json({ success: false, message: "Identifiant de joueur invalide" });
+    return;
+  }
+
+  const joueur = await prisma.joueur.findUnique({
+    where: { id },
+    include: { categorie: true },
+  });
+  if (!joueur) {
+    res.status(404).json({ success: false, message: "Joueur introuvable" });
+    return;
+  }
+
+  try {
+    const pdf = await genererFicheJoueurPdf(joueur);
+    const filename = `fiche-joueur-${slugFichier(joueur.nom)}-${slugFichier(joueur.prenom)}.pdf`;
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": String(pdf.length),
+    });
+    res.send(pdf);
+  } catch {
+    res.status(500).json({ success: false, message: "La génération du PDF a échoué" });
+  }
 }
 
 /**

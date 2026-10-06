@@ -30,9 +30,14 @@ FROM node:22-slim
 WORKDIR /app
 
 # Installer openssl + tini (gestion propre des signaux) + curl (healthcheck)
+# + chromium (génération des fiches PDF) et des polices de base
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends openssl tini curl \
+       chromium fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
+
+# puppeteer-core utilise le Chromium système (pas de téléchargement au build)
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Copier les node_modules et le client Prisma depuis le builder
 COPY --from=builder /app/node_modules ./node_modules

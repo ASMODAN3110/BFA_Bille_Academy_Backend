@@ -37,7 +37,9 @@ const app = express();
 
 // ---- Middlewares globaux ----
 app.use(helmet()); // en-têtes de sécurité
-app.use(cors()); // le frontend React tourne sur un autre port en dev
+// `exposedHeaders` : le front doit lire Content-Disposition pour récupérer
+// le nom de fichier des exports PDF (fetch cross-origin en prod).
+app.use(cors({ exposedHeaders: ["Content-Disposition"] })); // le frontend React tourne sur un autre port en dev
 app.use(morgan("dev")); // logs HTTP
 app.use(express.json()); // parsing du body JSON
 
