@@ -14,6 +14,8 @@ const MIN_NOM = 3;
 const MIN_DESCRIPTION = 10;
 const MIN_NOM_COMPLET = 2;
 const MIN_TELEPHONE = 8;
+/** Nombre maximal d'articles (lignes) dans une même demande de devis. */
+export const MAX_LIGNES_DEVIS = 20;
 
 function estNonVide(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
@@ -128,22 +130,39 @@ function validerTelephone(value: unknown, erreurs: string[]): void {
     erreurs.push(`Le téléphone doit contenir au moins ${MIN_TELEPHONE} caractères.`);
 }
 
-function validerProduitId(value: unknown, erreurs: string[]): void {
+function validerProduitId(value: unknown, erreurs: string[], prefixe = ""): void {
   const n = Number(value);
   if (value === undefined || value === null || value === "" || !Number.isInteger(n) || n <= 0)
-    erreurs.push("Le produit est obligatoire (identifiant numérique valide).");
+    erreurs.push(`${prefixe}Le produit est obligatoire (identifiant numérique valide).`);
 }
 
-function validerQuantite(value: unknown, erreurs: string[]): void {
+function validerQuantite(value: unknown, erreurs: string[], prefixe = ""): void {
   const n = Number(value);
   if (value === undefined || value === null || value === "" || !Number.isInteger(n) || n < 1)
-    erreurs.push("La quantité doit être un nombre entier d'au moins 1.");
+    erreurs.push(`${prefixe}La quantité doit être un nombre entier d'au moins 1.`);
 }
 
-function validerTaille(value: unknown, erreurs: string[]): void {
+function validerTaille(value: unknown, erreurs: string[], prefixe = ""): void {
   if (value === undefined || value === null || value === "") return;
   if (!(TAILLES as readonly string[]).includes(String(value)))
-    erreurs.push(`La taille doit être l'une des suivantes : ${TAILLES.join(", ")}.`);
+    erreurs.push(`${prefixe}La taille doit être l'une des suivantes : ${TAILLES.join(", ")}.`);
+}
+
+/** Une ligne d'un devis : produit, quantité et taille (facultative). */
+export interface LigneDevisBrute {
+  produitId?: unknown;
+  quantite?: unknown;
+  taille?: unknown;
+}
+
+/**
+ * Lignes d'une demande de devis. Format courant : `lignes: [{ produitId, quantite, taille? }]`.
+ * Ancien format (un seul produit à la racine : `produitId`, `quantite`, `taille`) toujours
+ * accepté : il équivaut à une demande d'une seule ligne.
+ */
+export function lignesDuDevis(body: Record<string, unknown>): LigneDevisBrute[] | null {
+  if (body.lignes !== undefined) return Array.isArray(body.lignes) ? (body.lignes as LigneDevisBrute[]) : null;
+  return [{ produitId: body.produitId, quantite: body.quantite, taille: body.taille }];
 }
 
 function validerMessage(value: unknown, erreurs: string[]): void {
@@ -151,15 +170,34 @@ function validerMessage(value: unknown, erreurs: string[]): void {
     erreurs.push("Le message doit être une chaîne de caractères.");
 }
 
-/** Demande de devis (@EF42, @EF43). */
+/** Demande de devis (@EF42, @EF43), pour un ou plusieurs articles. */
 export function validateQuoteCreate(body: Record<string, unknown>): string[] {
   const erreurs: string[] = [];
   validerNomComplet(body.nomComplet, erreurs);
   validerEmail(body.email, erreurs);
   validerTelephone(body.telephone, erreurs);
-  validerProduitId(body.produitId, erreurs);
-  validerQuantite(body.quantite, erreurs);
-  validerTaille(body.taille, erreurs);
+
+  const lignes = lignesDuDevis(body);
+  if (lignes === null) {
+    erreurs.push("Les articles du devis doivent être fournis sous forme de liste.");
+  } else if (lignes.length === 0) {
+    erreurs.push("Le devis doit contenir au moins un article.");
+  } else if (lignes.length > MAX_LIGNES_DEVIS) {
+    erreurs.push(`Le devis ne peut pas contenir plus de ${MAX_LIGNES_DEVIS} articles.`);
+  } else {
+    lignes.forEach((ligne, i) => {
+      // Préfixe « Article n : » seulement quand il y a plusieurs lignes.
+      const prefixe = lignes.length > 1 ? `Article ${i + 1} : ` : "";
+      if (ligne === null || typeof ligne !== "object" || Array.isArray(ligne)) {
+        erreurs.push(`${prefixe}Article invalide.`);
+        return;
+      }
+      validerProduitId(ligne.produitId, erreurs, prefixe);
+      validerQuantite(ligne.quantite, erreurs, prefixe);
+      validerTaille(ligne.taille, erreurs, prefixe);
+    });
+  }
+
   validerMessage(body.message, erreurs);
   return erreurs;
 }

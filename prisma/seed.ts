@@ -488,20 +488,25 @@ async function main() {
   }
   console.log(`  ✔ ${produitsData.length} produits créés (boutique)`);
 
+  type Taille = "S" | "M" | "L" | "XL" | "UNIQUE";
   const devisData: {
     nomComplet: string;
     email: string;
     telephone: string;
-    quantite: number;
-    taille: "S" | "M" | "L" | "XL" | "UNIQUE";
     message: string;
     estTraite: boolean;
-    produit: string;
+    lignes: { produit: string; quantite: number; taille: Taille }[];
   }[] = [
-    { nomComplet: "Marie Abena", email: "marie.abena@example.com", telephone: "+237 670 000 000", quantite: 10, taille: "L", message: "Pour l'équipe des supporters du quartier.", estTraite: false, produit: "Maillot domicile BFA" },
-    { nomComplet: "Paul Simo", email: "paul.simo@example.com", telephone: "+237 650 000 000", quantite: 2, taille: "XL", message: "Maillots pour mes deux enfants joueurs à l'académie.", estTraite: true, produit: "Maillot extérieur BFA" },
-    { nomComplet: "Jean Mbarga", email: "jean.mbarga@example.com", telephone: "+237 690 000 000", quantite: 5, taille: "UNIQUE", message: "Pour le club de mon quartier.", estTraite: false, produit: "Ballon officiel BFA" },
-    { nomComplet: "Nadia Fotso", email: "nadia.fotso@example.com", telephone: "+237 660 000 000", quantite: 20, taille: "UNIQUE", message: "Commandée pour la kermesse de l'école.", estTraite: true, produit: "Casquette BFA" },
+    { nomComplet: "Marie Abena", email: "marie.abena@example.com", telephone: "+237 670 000 000", message: "Pour l'équipe des supporters du quartier.", estTraite: false, lignes: [{ produit: "Maillot domicile BFA", quantite: 10, taille: "L" }] },
+    { nomComplet: "Paul Simo", email: "paul.simo@example.com", telephone: "+237 650 000 000", message: "Maillots pour mes deux enfants joueurs à l'académie.", estTraite: true, lignes: [{ produit: "Maillot extérieur BFA", quantite: 2, taille: "XL" }] },
+    { nomComplet: "Jean Mbarga", email: "jean.mbarga@example.com", telephone: "+237 690 000 000", message: "Pour le club de mon quartier.", estTraite: false, lignes: [{ produit: "Ballon officiel BFA", quantite: 5, taille: "UNIQUE" }] },
+    { nomComplet: "Nadia Fotso", email: "nadia.fotso@example.com", telephone: "+237 660 000 000", message: "Commandée pour la kermesse de l'école.", estTraite: true, lignes: [{ produit: "Casquette BFA", quantite: 20, taille: "UNIQUE" }] },
+    // Devis à plusieurs articles
+    { nomComplet: "Samuel Eto'o Junior", email: "samuel.junior@example.com", telephone: "+237 655 000 000", message: "Tenue complète pour l'équipe des U15 de notre école.", estTraite: false, lignes: [
+      { produit: "Maillot domicile BFA", quantite: 14, taille: "M" },
+      { produit: "Short officiel BFA", quantite: 14, taille: "M" },
+      { produit: "Ballon officiel BFA", quantite: 3, taille: "UNIQUE" },
+    ] },
   ];
 
   for (const d of devisData) {
@@ -510,12 +515,17 @@ async function main() {
         nomComplet: d.nomComplet,
         email: d.email,
         telephone: d.telephone,
-        quantite: d.quantite,
-        taille: d.taille,
         message: d.message,
         estTraite: d.estTraite,
-        produitId: produits.get(d.produit)!,
         administrateurId: admin.id,
+        lignes: {
+          create: d.lignes.map((l) => ({
+            produitId: produits.get(l.produit)!,
+            produitNom: l.produit,
+            quantite: l.quantite,
+            taille: l.taille,
+          })),
+        },
       },
     });
   }

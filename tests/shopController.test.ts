@@ -40,8 +40,9 @@ const produitFixture = {
 
 const devisFixture = {
   id: 1, nomComplet: 'Jean Dupont', email: 'jean@test.com',
-  telephone: '+237690000000', produitId: 1, quantite: 2, taille: 'M',
+  telephone: '+237690000000',
   message: null, estTraite: false, dateDemande: new Date(),
+  lignes: [{ id: 1, devisId: 1, produitId: 1, produitNom: 'Maillot BFA', quantite: 2, taille: 'M' }],
 }
 
 describe('shopController — getPublicProducts', () => {
@@ -67,6 +68,15 @@ describe('shopController — getPublicProducts', () => {
     )
   })
 
+  it('exclut les produits en rupture de stock du catalogue public', async () => {
+    mockProductService.listerProduits.mockResolvedValue({ ok: true, data: { items: [] } })
+    const req = { query: {} } as unknown as Request
+    await getPublicProducts(req, mockRes())
+    expect(mockProductService.listerProduits).toHaveBeenCalledWith(
+      expect.objectContaining({ enStock: true }),
+    )
+  })
+
   it('retourne 400 si catégorie invalide', async () => {
     const req = { query: { categorie: 'Invalide' } } as unknown as Request
     const res = mockRes()
@@ -88,6 +98,14 @@ describe('shopController — getProductByIdPublic', () => {
   it('retourne 404 si le produit n\'existe pas', async () => {
     mockProductService.obtenirProduit.mockResolvedValue({ ok: false, code: 'PRODUIT_INTROUVABLE' })
     const req = { params: { id: '999' } } as unknown as Request
+    const res = mockRes()
+    await getProductByIdPublic(req, res)
+    expect(res.status).toHaveBeenCalledWith(404)
+  })
+
+  it('retourne 404 si le produit est en rupture de stock (détail public)', async () => {
+    mockProductService.obtenirProduit.mockResolvedValue({ ok: true, data: { ...produitFixture, stock: 0 } })
+    const req = { params: { id: '1' } } as unknown as Request
     const res = mockRes()
     await getProductByIdPublic(req, res)
     expect(res.status).toHaveBeenCalledWith(404)
@@ -268,6 +286,14 @@ describe('shopController — getProducts (admin)', () => {
     const res = mockRes()
     await getProducts(req, res)
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }))
+  })
+
+  it('liste aussi les produits en rupture de stock (le back-office voit tout)', async () => {
+    mockProductService.listerProduits.mockResolvedValue({ ok: true, data: { items: [] } })
+    await getProducts({ query: {} } as unknown as Request, mockRes())
+    expect(mockProductService.listerProduits).toHaveBeenCalledWith(
+      expect.not.objectContaining({ enStock: true }),
+    )
   })
 })
 

@@ -258,7 +258,7 @@ model Produit {
 
   administrateurId Int?
   gereePar         Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
-  devis            Devis[]
+  lignesDevis      LigneDevis[]
 
   @@index([nom])
 }
@@ -270,19 +270,33 @@ model Devis {
   nomComplet       String
   email            String
   telephone        String
-  quantite         Int             @default(1)
-  taille           Taille?
   message          String?
   dateDemande      DateTime        @default(now())
   estTraite        Boolean         @default(false)
 
-  produitId        Int
-  produit          Produit         @relation(fields: [produitId], references: [id], onDelete: Cascade)
+  // Un devis porte une ou plusieurs lignes (produit, taille, quantité).
+  lignes           LigneDevis[]
   administrateurId Int?
   traitePar        Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
 
-  @@index([produitId])
   @@index([estTraite])
+}
+
+// Ligne d'un devis. `produitNom` est une copie du nom au moment de la demande :
+// si le produit est supprimé plus tard (produitId passe à NULL), le devis reste lisible.
+model LigneDevis {
+  id         Int      @id @default(autoincrement())
+  quantite   Int      @default(1)
+  taille     Taille?
+  produitNom String
+
+  devisId    Int
+  devis      Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  produitId  Int?
+  produit    Produit? @relation(fields: [produitId], references: [id], onDelete: SetNull)
+
+  @@index([devisId])
+  @@index([produitId])
 }
 
 /// Module 9 — Administrateur du back-office.

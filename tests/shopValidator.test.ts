@@ -126,3 +126,53 @@ describe('validateQuoteCreate', () => {
     expect(validateQuoteCreate({ ...baseDevis, message: 'Urgent' })).toEqual([])
   })
 })
+
+describe('validateQuoteCreate — devis à plusieurs articles', () => {
+  const base = { nomComplet: 'Jean Dupont', email: 'jean@test.com', telephone: '+237690000000' }
+
+  it('accepte une liste de plusieurs lignes valides', () => {
+    const lignes = [
+      { produitId: 1, quantite: 14, taille: 'M' },
+      { produitId: 2, quantite: 14, taille: 'L' },
+      { produitId: 3, quantite: 3 },
+    ]
+    expect(validateQuoteCreate({ ...base, lignes })).toEqual([])
+  })
+
+  it('accepte une liste d\'une seule ligne', () => {
+    expect(validateQuoteCreate({ ...base, lignes: [{ produitId: 1, quantite: 1 }] })).toEqual([])
+  })
+
+  it('refuse une liste vide', () => {
+    expect(validateQuoteCreate({ ...base, lignes: [] }).some((m) => /au moins un article/i.test(m))).toBe(true)
+  })
+
+  it('refuse des lignes qui ne sont pas une liste', () => {
+    expect(validateQuoteCreate({ ...base, lignes: 'x' }).some((m) => /liste/i.test(m))).toBe(true)
+  })
+
+  it('refuse plus de 20 articles', () => {
+    const lignes = Array.from({ length: 21 }, (_, i) => ({ produitId: i + 1, quantite: 1 }))
+    expect(validateQuoteCreate({ ...base, lignes }).some((m) => /plus de 20/i.test(m))).toBe(true)
+  })
+
+  it('indique le numéro de l\'article en erreur', () => {
+    const erreurs = validateQuoteCreate({
+      ...base,
+      lignes: [{ produitId: 1, quantite: 1 }, { produitId: 2, quantite: 0 }, { produitId: 'x', quantite: 1, taille: 'XXL' }],
+    })
+    expect(erreurs.some((m) => /^Article 2 : .*quantité/i.test(m))).toBe(true)
+    expect(erreurs.some((m) => /^Article 3 : .*produit/i.test(m))).toBe(true)
+    expect(erreurs.some((m) => /^Article 3 : .*taille/i.test(m))).toBe(true)
+    expect(erreurs.some((m) => /^Article 1/i.test(m))).toBe(false)
+  })
+
+  it('refuse une ligne qui n\'est pas un objet', () => {
+    expect(validateQuoteCreate({ ...base, lignes: [null] }).some((m) => /article invalide/i.test(m))).toBe(true)
+  })
+
+  it('valide toujours les champs du client avec des lignes valides', () => {
+    const erreurs = validateQuoteCreate({ ...base, email: 'nope', lignes: [{ produitId: 1, quantite: 1 }] })
+    expect(erreurs.some((m) => /email/i.test(m))).toBe(true)
+  })
+})

@@ -97,7 +97,7 @@ routes → controllers → services → prisma
 | 5. Fiches techniques | `FicheTechnique` | `/api/team-sheets` | `/admin/team-sheets` |
 | 6. Blog | `Article` | `/api/blog` | `/admin/blog` |
 | 7. Résultats | `Resultat`, `Classement` | `/api/results`, `/api/rankings` | `/admin/results` |
-| 8. Boutique | `Produit`, `Devis` | `/api/products`, `/api/quotes` | `/admin/products`, `/admin/quotes` |
+| 8. Boutique | `Produit`, `Devis`, `LigneDevis` (un devis = une ou plusieurs lignes) | `/api/products`, `/api/quotes` | `/admin/products`, `/admin/quotes` |
 | 9. Admin | `Administrateur` | `/api/auth` | `/admin/*` (dashboard, stats, users) |
 | 10. Utilisateurs | `Administrateur` | — | `/admin/users`, `/admin/profile/password` |
 
