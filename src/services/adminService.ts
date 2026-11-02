@@ -47,7 +47,26 @@ export async function getStatsTrials() {
     prisma.demandeEssai.count({ where: { statut: "REFUSE" } }),
   ]);
 
-  return { ok: true, data: { total, pending, confirmed, refused } };
+  /* Demandes reçues / acceptées sur les 6 derniers mois (mois courant inclus) */
+  const debut = new Date();
+  debut.setDate(1);
+  debut.setHours(0, 0, 0, 0);
+  debut.setMonth(debut.getMonth() - 5);
+  const recentes = await prisma.demandeEssai.findMany({
+    where: { dateSoumission: { gte: debut } },
+    select: { dateSoumission: true, statut: true },
+  });
+  const byMonth = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
+    const mois = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const duMois = recentes.filter((r) => {
+      const s = r.dateSoumission;
+      return s.getFullYear() === d.getFullYear() && s.getMonth() === d.getMonth();
+    });
+    return { mois, total: duMois.length, confirmed: duMois.filter((r) => r.statut === "CONFIRME").length };
+  });
+
+  return { ok: true, data: { total, pending, confirmed, refused, byMonth } };
 }
 
 /** Statistiques événements : total, à venir (date ≥ maintenant), passés. */
