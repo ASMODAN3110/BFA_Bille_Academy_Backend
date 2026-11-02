@@ -16,9 +16,19 @@ const demande = {
 
 const devis = {
   id: 1, nomComplet: 'Jean Dupont', email: 'jean@test.com',
-  telephone: '+237690000000', produitId: 1, quantite: 2, taille: 'M',
+  telephone: '+237690000000',
   message: 'Urgent', estTraite: false, dateDemande: new Date(), administrateurId: null,
-  produit: { id: 1, nom: 'Maillot BFA' },
+  lignes: [{ id: 1, devisId: 1, produitId: 1, produitNom: 'Maillot BFA', quantite: 2, taille: 'M' }],
+} as any
+
+/** Devis de 3 articles (dont un nom contenant du HTML, à échapper). */
+const devisMulti = {
+  ...devis,
+  lignes: [
+    { id: 1, devisId: 1, produitId: 1, produitNom: 'Maillot BFA', quantite: 14, taille: 'M' },
+    { id: 2, devisId: 1, produitId: 2, produitNom: 'Short <b>BFA</b>', quantite: 14, taille: 'L' },
+    { id: 3, devisId: 1, produitId: 3, produitNom: 'Ballon BFA', quantite: 3, taille: null },
+  ],
 } as any
 
 describe('emailTemplates — templateAccuseReception', () => {
@@ -66,12 +76,27 @@ describe('emailTemplates — templateRefusEssai', () => {
 })
 
 describe('emailTemplates — templateConfirmationDevis', () => {
-  it('retourne la confirmation avec produit et quantité', () => {
+  it('retourne la confirmation avec produit, taille et quantité', () => {
     const { subject, html } = templateConfirmationDevis(devis)
     expect(subject).toContain('devis')
     expect(html).toContain('Maillot BFA')
-    expect(html).toContain('2')
+    expect(html).toContain('taille M')
+    expect(html).toContain('quantité : 2')
     expect(html).toContain('Jean Dupont')
+  })
+
+  it('liste tous les articles d\'un devis à plusieurs lignes', () => {
+    const { html } = templateConfirmationDevis(devisMulti)
+    expect(html).toContain('les 3 articles')
+    expect(html).toContain('Maillot BFA')
+    expect(html).toContain('Ballon BFA')
+    expect((html.match(/<li>/g) ?? []).length).toBe(3)
+  })
+
+  it('échappe le HTML dans le nom d\'un produit', () => {
+    const { html } = templateConfirmationDevis(devisMulti)
+    expect(html).not.toContain('<b>BFA</b>')
+    expect(html).toContain('Short &lt;b&gt;BFA&lt;/b&gt;')
   })
 
   it('inclut le numéro de téléphone', () => {
@@ -85,12 +110,19 @@ describe('emailTemplates — templateNotificationDevis', () => {
     const { subject, html } = templateNotificationDevis(devis)
     expect(subject).toContain('Maillot BFA')
     expect(html).toContain('Maillot BFA')
-    expect(html).toContain('2')
-    expect(html).toContain('M')
+    expect(html).toContain('quantité : 2')
+    expect(html).toContain('taille M')
   })
 
-  it('affiche "—" si taille est null', () => {
-    const d = { ...devis, taille: null, message: null }
+  it('résume le nombre d\'articles dans le sujet pour un devis à plusieurs lignes', () => {
+    const { subject, html } = templateNotificationDevis(devisMulti)
+    expect(subject).toContain('3 articles')
+    expect(html).toContain('3 articles')
+    expect(html).toContain('Ballon BFA — quantité : 3')
+  })
+
+  it('affiche "—" si le message est null', () => {
+    const d = { ...devis, message: null }
     const { html } = templateNotificationDevis(d)
     expect(html).toContain('—')
   })

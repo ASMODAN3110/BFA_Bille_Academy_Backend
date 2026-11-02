@@ -12,7 +12,7 @@ import {
   templateConfirmationEssai,
   templateNotificationDevis,
   templateRefusEssai,
-  type DevisAvecProduit,
+  type DevisAvecLignes,
 } from "../templates/emailTemplates";
 
 /** Vrai si l'envoi réel d'emails est activé (EMAIL_ENABLED=1 + RESEND_API_KEY renseignée). */
@@ -80,13 +80,13 @@ export async function envoyerRefusEssai(demande: DemandeEssai): Promise<void> {
 // ---- Module 8 : Demandes de devis (@EF42) ----
 
 /** Confirmation au client, envoyée à la création d'un devis (@EF42). */
-export async function envoyerConfirmationDevis(devis: DevisAvecProduit): Promise<void> {
+export async function envoyerConfirmationDevis(devis: DevisAvecLignes): Promise<void> {
   const { subject, html } = templateConfirmationDevis(devis);
   await envoyerEmail(devis.email, subject, html);
 }
 
 /** Notification à l'académie, envoyée à la création d'un devis (@EF42). */
-export async function envoyerNotificationDevis(devis: DevisAvecProduit): Promise<void> {
+export async function envoyerNotificationDevis(devis: DevisAvecLignes): Promise<void> {
   const { subject, html } = templateNotificationDevis(devis);
   await envoyerEmail(
     process.env.ACADEMY_EMAIL ?? "contact@bfa-bille-academy.com",

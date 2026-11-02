@@ -4,8 +4,28 @@
 
 import type { DemandeEssai, Prisma } from "../../generated/prisma/client";
 
-/** Devis avec son produit, renvoyé par `quoteService` et consommé par les templates. */
-export type DevisAvecProduit = Prisma.DevisGetPayload<{ include: { produit: true } }>;
+/** Devis avec ses lignes, renvoyé par `quoteService` et consommé par les templates. */
+export type DevisAvecLignes = Prisma.DevisGetPayload<{ include: { lignes: true } }>;
+
+/** Échappe le texte inséré dans le HTML d'un email. */
+function echapper(texte: string): string {
+  return texte
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Une ligne de devis en texte : « Maillot BFA — taille M — quantité : 2 ». */
+function ligneDevisTexte(l: DevisAvecLignes["lignes"][number]): string {
+  const taille = l.taille ? ` — taille ${l.taille}` : "";
+  return `${echapper(l.produitNom)}${taille} — quantité : ${l.quantite}`;
+}
+
+/** Liste HTML des articles d'un devis. */
+function listeArticles(devis: DevisAvecLignes): string {
+  return `<ul>${devis.lignes.map((l) => `<li>${ligneDevisTexte(l)}</li>`).join("")}</ul>`;
+}
 
 /** Date d'essai formatée en français (ex: 27/08/2026). */
 function dateFr(date: Date): string {
@@ -79,12 +99,14 @@ export function templateRefusEssai(demande: DemandeEssai): { subject: string; ht
 // =====================================================================
 
 /** Confirmation envoyée au client (@EF42). */
-export function templateConfirmationDevis(devis: DevisAvecProduit): { subject: string; html: string } {
+export function templateConfirmationDevis(devis: DevisAvecLignes): { subject: string; html: string } {
   const subject = "BFA Bille Academy — Demande de devis reçue";
+  const n = devis.lignes.length;
   const corps = `
     <p>Bonjour ${devis.nomComplet},</p>
-    <p>Votre demande de devis pour le produit <strong>${devis.produit.nom}</strong>
-       (quantité : ${devis.quantite}) a bien été prise en compte.</p>
+    <p>Votre demande de devis ${n > 1 ? `pour les ${n} articles suivants` : "pour l'article suivant"}
+       a bien été prise en compte :</p>
+    ${listeArticles(devis)}
     <p>Notre équipe vous contactera très rapidement au <strong>${devis.telephone}</strong>
        pour finaliser votre commande.</p>
     <p>Merci pour votre confiance !</p>`;
@@ -92,14 +114,15 @@ export function templateConfirmationDevis(devis: DevisAvecProduit): { subject: s
 }
 
 /** Notification à l'académie (@EF42). Destinataire : contact@bfa-bille-academy.com. */
-export function templateNotificationDevis(devis: DevisAvecProduit): { subject: string; html: string } {
-  const subject = `BFA Bille Academy — Nouvelle demande de devis : ${devis.produit.nom}`;
+export function templateNotificationDevis(devis: DevisAvecLignes): { subject: string; html: string } {
+  const n = devis.lignes.length;
+  const sujetArticles = n === 1 ? echapper(devis.lignes[0].produitNom) : `${n} articles`;
+  const subject = `BFA Bille Academy — Nouvelle demande de devis : ${sujetArticles}`;
   const corps = `
-    <p>Une nouvelle demande de devis vient d'être soumise sur la boutique :</p>
+    <p>Une nouvelle demande de devis vient d'être soumise sur la boutique
+       (${n} article${n > 1 ? "s" : ""}) :</p>
+    ${listeArticles(devis)}
     <ul>
-      <li><strong>Produit :</strong> ${devis.produit.nom}</li>
-      <li><strong>Quantité :</strong> ${devis.quantite}</li>
-      <li><strong>Taille :</strong> ${devis.taille ?? "—"}</li>
       <li><strong>Client :</strong> ${devis.nomComplet} (${devis.email})</li>
       <li><strong>Téléphone :</strong> ${devis.telephone}</li>
       <li><strong>Message :</strong> ${devis.message ?? "—"}</li>
