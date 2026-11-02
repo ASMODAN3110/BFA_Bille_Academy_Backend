@@ -80,21 +80,26 @@ function filtresProduits(req: Request, res: Response): { categorie?: string; est
   return { categorie: categorie?.trim(), estNouveau };
 }
 
-/** GET /api/products — Catalogue public (@EF41). */
+/** GET /api/products — Catalogue public (@EF41) : les produits en rupture de stock n'y figurent pas. */
 export async function getPublicProducts(req: Request, res: Response): Promise<void> {
   const { page, limit } = lirePagination(req);
   const filtres = filtresProduits(req, res);
   if (!filtres) return;
-  const resultat = await listerProduits({ page, limit, ...filtres });
+  const resultat = await listerProduits({ page, limit, ...filtres, enStock: true });
   res.json({ success: true, data: resultat.data });
 }
 
-/** GET /api/products/:id — Détail public (@EF41), 404 si absent. */
+/** GET /api/products/:id — Détail public (@EF41), 404 si absent ou en rupture de stock. */
 export async function getProductByIdPublic(req: Request, res: Response): Promise<void> {
   const id = parseId(req.params.id);
   if (!id) { res.status(400).json({ success: false, message: "Identifiant de produit invalide" }); return; }
   const resultat = await obtenirProduit(id);
   if (!resultat.ok) { res.status(statutPourCode(resultat.code)).json({ success: false, message: resultat.message }); return; }
+  // Un produit en rupture de stock n'est pas proposé dans la boutique : introuvable côté public.
+  if ((resultat.data as { stock?: number }).stock === 0) {
+    res.status(404).json({ success: false, message: "Produit introuvable." });
+    return;
+  }
   res.json({ success: true, data: resultat.data });
 }
 

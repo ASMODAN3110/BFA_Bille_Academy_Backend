@@ -37,18 +37,23 @@ function extraireCle(url: string): string | null {
   return url.startsWith(prefix) ? url.slice(prefix.length) : null;
 }
 
-/** GET — Liste paginée, filtres `?categorie=` et `?estNouveau=` (@EF41). */
+/**
+ * GET — Liste paginée, filtres `?categorie=` et `?estNouveau=` (@EF41).
+ * `enStock: true` (catalogue public) exclut les produits en rupture de stock.
+ */
 export async function listerProduits(params: {
   page: number;
   limit: number;
   categorie?: string;
   estNouveau?: boolean;
+  enStock?: boolean;
 }): Promise<ProduitOperation> {
-  const { page, limit, categorie, estNouveau } = params;
+  const { page, limit, categorie, estNouveau, enStock } = params;
 
   const where: Prisma.ProduitWhereInput = {};
   if (categorie !== undefined) where.categorie = categorie;
   if (estNouveau !== undefined) where.estNouveau = estNouveau;
+  if (enStock) where.stock = { gt: 0 };
 
   const [items, total] = await Promise.all([
     prisma.produit.findMany({
